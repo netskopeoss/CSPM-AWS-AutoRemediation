@@ -1,0 +1,14 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Topic: 'arn:aws:sns:us-east-1:123456789012:TestTopic'
+            Event: 's3:ReducedRedundancyLostObject'
+Outputs:
+  BucketName:
+    Value: !Ref S3Bucket
+    Description: Name of the sample Amazon S3 bucket with a notification configuration.

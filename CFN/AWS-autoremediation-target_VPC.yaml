@@ -1,0 +1,141 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: "AWS Autoremediation 2.0 target account template"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterLabels:
+      AWSManagementAccount:
+        default: AWS Management Account ID
+
+Parameters:
+  AWSManagementAccount:
+    Default: ""
+    Description: 'AWS Account choosen for autoremediation management'
+    Type: String
+
+Resources:
+  CIS14039VPCFlowLogsRole:
+      Type: 'AWS::IAM::Role'
+      Properties: 
+        RoleName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+        Tags: 
+          - Key: Type
+            Value: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: 
+                  - vpc-flow-logs.amazonaws.com
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "logs:CreateLogGroup"
+                      - "logs:CreateLogStream"
+                      - "logs:DescribeLogGroups"
+                      - "logs:DescribeLogStreams"
+                      - "logs:PutLogEvents"
+                    Resource:
+                      - "*"
+
+  CIS14039VPCFlowLogsTargetRole:
+      Type: 'AWS::IAM::Role'
+      Properties: 
+        RoleName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetRole_${AWS::Region}"
+        Tags: 
+          - Key: Type
+            Value: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: 
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-4-0-3-9-VPCFlowLogsLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "ec2:CreateFlowLogs"
+                      - "logs:CreateLogGroup"
+                    Resource:
+                      - !Sub "arn:aws:ec2:*:${AWS::AccountId}:vpc/*"
+                      - !Sub "arn:aws:ec2:*:${AWS::AccountId}:vpc-flow-log/*"
+                      - !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:VPCFlowLogs/*"
+                  - Effect: Allow
+                    Action:
+                      - "ec2:DescribeFlowLogs"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+                      
+  CIS12041SecurityGroupsPort22TargetRole:
+      Type: 'AWS::IAM::Role'
+      Properties: 
+        RoleName: !Sub "CIS-1-2-0-4-1-VecurityGroupsPort22TargetRole_${AWS::Region}"
+        Tags: 
+          - Key: Type
+            Value: !Sub "CIS-1-2-0-4-1-VecurityGroupsPort22TargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: 
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-4-1-VecurityGroupsPort22LambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-2-0-4-1-VecurityGroupsPort22TargetPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "ec2:DescribeSecurityGroupReferences"
+                      - "ec2:DescribeSecurityGroups"
+                      - "ec2:UpdateSecurityGroupRuleDescriptionsEgress"
+                      - "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+                      - "ec2:RevokeSecurityGroupIngress"
+                      - "ec2:RevokeSecurityGroupEgress"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "ssm:StartAutomationExecution"
+                    Resource:
+                      - !Sub "arn:aws:ssm:{AWS::Region}:${AWS::AccountId}:document/AWS-DisablePublicAccessForSecurityGroup"
+                      - !Sub "arn:aws:ssm:{AWS::Region}:*:automation-definition/*"
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-4-1-VecurityGroupsPort22TargetPolicy_${AWS::Region}"
+
+Outputs:
+  CIS14039VPCFlowLogsRole:
+    Value: !Ref CIS14039VPCFlowLogsRole
+    Description: Roles to be used for the VPC Flow Logs delivery
+  CIS14039VPCFlowLogsTargetRole:
+    Value: !Ref CIS14039VPCFlowLogsTargetRole
+    Description: VPC Flow Logs remediation role
+  CIS12041SecurityGroupsPort22TargetRole:
+    Value: !Ref CIS12041SecurityGroupsPort22TargetRole
+    Description: Roles to be used for the Security Group remediation
+  
