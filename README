@@ -9,36 +9,36 @@ The solution is regional and works across your organization’s accounts. It’s
 Deployment steps.
 1.	Deploy the AWS-autoremediation CloudFormation stack on the Delegated Auto-Remediation account. 
 
-a.	Clone this repository to your machine. 
+    a.	Clone this repository to your machine. 
 
-git clone https://github.com/netskopeoss/CSPM-AWS-AutoRemediation.git
+    git clone https://github.com/netskopeoss/CSPM-AWS-AutoRemediation.git
 
-b.	Change the region to the one you are deploring the solution. 
-c.	In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
-d.	Choose Upload a template file and click on Choose file.
-e.	Choose the AWS-autoremediation.yaml from the disk and click Next.
-f.	Enter the stack name and the parameters for your deployment:
+    b.	Change the region to the one you are deploring the solution. 
+    c.	In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
+    d.	Choose Upload a template file and click on Choose file.
+    e.	Choose the AWS-autoremediation.yaml from the disk and click Next.
+    f.	Enter the stack name and the parameters for your deployment:
 
-  NetskopeAPIToken – the secret access token to access Netskope API v1. The solution stores this token in AWS Secrets Manager encrypted with AWS KMS
+      NetskopeAPIToken – the secret access token to access Netskope API v1. The solution stores this token in AWS Secrets Manager encrypted with AWS KMS
 
-  NetskopeTenantFQDN – your Netskope tenant FQDN. For example, myorg.goskope.com
+      NetskopeTenantFQDN – your Netskope tenant FQDN. For example, myorg.goskope.com
 
-g.	Click Next.
-h.	Optionally, enter the Tags for your CloudFormation stack and click Next.
-i.	Acknowledge creating IAM resources and click Create stack.
+    g.	Click Next.
+    h.	Optionally, enter the Tags for your CloudFormation stack and click Next.
+    i.	Acknowledge creating IAM resources and click Create stack.
 
 2.	Deploy the AWS-autoremediation-target CloudFormation stack on each of your organization’s accounts, including the Delegated Auto-Remediation account. 
 You can deploy it using AWS CloudFormation StackSet or using your own automation tools.
 
 To deploy it on the individual account:
 
-a.	In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
-b.	Choose Upload a template file and click on Choose file.
-c.	Choose the AWS-autoremediation-target.yaml from the disk and click Next.
-d.	Enter the stack name and the parameters for your deployment:
+    a.	In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
+    b.	Choose Upload a template file and click on Choose file.
+    c.	Choose the AWS-autoremediation-target.yaml from the disk and click Next.
+    d.	Enter the stack name and the parameters for your deployment:
 
-  AWSManagementAccount – the account ID of your Delegated Auto-Remediation account where you deployed the AWS-autoremediation CloudFormation stack.
+      AWSManagementAccount – the account ID of your Delegated Auto-Remediation account where you deployed the AWS-autoremediation CloudFormation stack.
 
-e.	Click Next.
-f.	Optionally, enter the Tags for your CloudFormation stack and click Next.
-g.	Acknowledge creating IAM resources and click Create stack.
+    e.	Click Next.
+    f.	Optionally, enter the Tags for your CloudFormation stack and click Next.
+    g.	Acknowledge creating IAM resources and click Create stack.
