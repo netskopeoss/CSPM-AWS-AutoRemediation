@@ -18,9 +18,10 @@ c.	In the AWS CloudFormation management console click Create Stack and choose Wi
 d.	Choose Upload a template file and click on Choose file.
 e.	Choose the AWS-autoremediation.yaml from the disk and click Next.
 f.	Enter the stack name and the parameters for your deployment:
-NetskopeAPIToken – the secret access token to access Netskope API v1. The solution stores this token in AWS Secrets Manager encrypted with AWS KMS
 
-NetskopeTenantFQDN – your Netskope tenant FQDN. For example, myorg.goskope.com
+  NetskopeAPIToken – the secret access token to access Netskope API v1. The solution stores this token in AWS Secrets Manager encrypted with AWS KMS
+
+  NetskopeTenantFQDN – your Netskope tenant FQDN. For example, myorg.goskope.com
 
 g.	Click Next.
 h.	Optionally, enter the Tags for your CloudFormation stack and click Next.
@@ -36,7 +37,7 @@ b.	Choose Upload a template file and click on Choose file.
 c.	Choose the AWS-autoremediation-target.yaml from the disk and click Next.
 d.	Enter the stack name and the parameters for your deployment:
 
-AWSManagementAccount – the account ID of your Delegated Auto-Remediation account where you deployed the AWS-autoremediation CloudFormation stack.
+  AWSManagementAccount – the account ID of your Delegated Auto-Remediation account where you deployed the AWS-autoremediation CloudFormation stack.
 
 e.	Click Next.
 f.	Optionally, enter the Tags for your CloudFormation stack and click Next.
