@@ -214,7 +214,7 @@ Resources:
       State: "ENABLED"
       Targets: 
         - 
-          Arn: .
+          Arn: 
             Fn::GetAtt: 
               - "GetNetskopeCSPMResultsLF"
               - "Arn"
