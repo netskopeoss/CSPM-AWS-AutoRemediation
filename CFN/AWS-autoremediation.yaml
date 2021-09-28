@@ -8,6 +8,12 @@ Metadata:
         default: Netskope Tenant FQDN
       NetskopeAPIToken:
         default: Netskope API v1 token
+      CIS12029VPCFlowLogs:
+        default: CIS-1-2-0-2-9 - VPC Flow logs remediation
+      CIS12041SecurityGroupsPort22:
+        default: CIS-1-2-0-4-1 - wide open port 22 remediation
+      CIS12042SecurityGroupsPort3389:
+        default: CIS-1-2-0-4-2 - wide open port 3389 remediation
 
 Parameters:
   NetskopeTenantFQDN:
@@ -15,14 +21,50 @@ Parameters:
     Description: 'Your Netskope tenant FQDN. For example, example.goskope.com'
     Type: String
   NetskopeAPIToken:
+    NoEcho: true
     Default: ""
     Description: 'Netskope API v1 token'
     Type: String
+  CIS12029VPCFlowLogs:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-2-9  - enable VPC flow logs on all VPCs'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12041SecurityGroupsPort22:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-4-1  - disable SSH access from 0.0.0.0/0'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12042SecurityGroupsPort3389:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-4-2  - disable RDP access from 0.0.0.0/0'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+Conditions: 
+  CIS12029VPCFlowLogsEnabled: !Equals
+      - !Ref CIS12029VPCFlowLogs
+      - 'yes'
+  CIS12041SecurityGroupsPort22Enabled: !Equals
+      - !Ref CIS12041SecurityGroupsPort22
+      - 'yes'
+  CIS12042SecurityGroupsPort3389Enabled: !Equals
+      - !Ref CIS12042SecurityGroupsPort3389
+      - 'yes'
+  CIS12041SecurityGroupsEnabled: !Or 
+    - !Condition CIS12041SecurityGroupsPort22Enabled
+    - !Condition CIS12042SecurityGroupsPort3389Enabled
 Mappings:
       SourceCode:
           General:
-              S3Bucket: 'yd-source-us-west-2'
+              S3Bucket: 'yd-source'
               S3Prefix: "AWSAutoremediation"
+
 
 Resources:
   AssesmentResultsS3Bucket:
@@ -43,13 +85,13 @@ Resources:
           Key: Name
           Value: NetskopeAPIToken
 
-  GetNetskopeSCMPResultsLFRole:
+  GetNetskopeCSPMResultsLFRole:
       Type: 'AWS::IAM::Role'
       Properties: 
-        RoleName: !Sub "GetNetskopeSCMPResultsLFRole_${AWS::Region}"
+        RoleName: !Sub "GetNetskopeCSPMResultsLFRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: GetNetskopeSCMPResultsLFRole
+            Value: GetNetskopeCSPMResultsLFRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -60,7 +102,7 @@ Resources:
                 - sts:AssumeRole
         Path: '/'
         Policies:
-            - PolicyName: !Sub "GetNetskopeSCMPResultsLFPolicy_${AWS::Region}"
+            - PolicyName: !Sub "GetNetskopeCSPMResultsLFPolicy_${AWS::Region}"
               PolicyDocument:
                 Statement:
                   - Effect: Allow
@@ -84,15 +126,15 @@ Resources:
                       - 'secretsmanager:DescribeSecret'
                     Resource: !Ref APISecret
 
-  GetNetskopeSCMPResultsLF:
+  GetNetskopeCSPMResultsLF:
       Type: 'AWS::Lambda::Function'
       Properties:
         Description: >-
           This lambda function calls Netskope API to retrieve AWS security assesment results and save them in the S3 bucket.
         Handler: 'lambda_function.lambda_handler'
-        Role: !GetAtt GetNetskopeSCMPResultsLFRole.Arn
+        Role: !GetAtt GetNetskopeCSPMResultsLFRole.Arn
         Code:
-          S3Bucket: !FindInMap ["SourceCode", "General", "S3Bucket"]
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
           S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'GetNetskopeSecurityPostureAssesmentLambda.zip']]
         Environment:
           Variables:
@@ -105,49 +147,97 @@ Resources:
         Timeout: 300
         Tags: 
           - Key: Type
-            Value: GetNetskopeSCMPResultsLF
+            Value: GetNetskopeCSPMResultsLF
 
   EventRuleScheduledVPCFlowLogs: 
     Type: AWS::Events::Rule
-    DependsOn: GetNetskopeSCMPResultsLF
+    DependsOn: GetNetskopeCSPMResultsLF
+    Condition: CIS12029VPCFlowLogsEnabled
     Properties: 
-      Name: CIS-1-4-0-3-9-VPCFlowLogs-GetResultsFromNetskope
-      Description: "Scheduled event Rule for GetNetskopeSCMPResultsLF Lambda function - VPC flow logs rule"
+      Name: CIS-1-2-0-2-9-VPCFlowLogs-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - VPC flow logs rule"
       ScheduleExpression: "rate(10 minutes)"
       State: "ENABLED"
       Targets: 
         - 
           Arn: 
             Fn::GetAtt: 
-              - "GetNetskopeSCMPResultsLF"
+              - "GetNetskopeCSPMResultsLF"
               - "Arn"
-          Id: "GetNetskopeSCMPResultsLF"
-          Input: '{"rule_name":"Baseline network operations and data flows: Ensure VPC flow logging is enabled in all VPCs","rule_short_name":"CIS-1-4-0-3-9"}'
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Baseline network operations and data flows: Ensure VPC flow logging is enabled in all VPCs","rule_short_name":"CIS-1-2-0-2-9"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFVPCFlowLogs:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-2-9-VPCFlowLogs-GetResultsFromNetskope'
 
   EventRuleScheduledSecurityGroupPort22: 
+    Condition: CIS12041SecurityGroupsPort22Enabled
     Type: AWS::Events::Rule
-    DependsOn: GetNetskopeSCMPResultsLF
+    DependsOn: GetNetskopeCSPMResultsLF
     Properties: 
       Name: CIS-1-2-0-4-1-SecurityGroups22-GetResultsFromNetskope
-      Description: "Scheduled event Rule for GetNetskopeSCMPResultsLF Lambda function - port 22 wide open rule"
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - port 22 wide open rule"
       ScheduleExpression: "rate(10 minutes)"
       State: "ENABLED"
       Targets: 
         - 
           Arn: 
             Fn::GetAtt: 
-              - "GetNetskopeSCMPResultsLF"
+              - "GetNetskopeCSPMResultsLF"
               - "Arn"
-          Id: "GetNetskopeSCMPResultsLF"
+          Id: "GetNetskopeCSPMResultsLF"
           Input: '{"rule_name":"Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22","rule_short_name":"CIS-1-2-0-4-1"}'
+  
+  PermissionToInvokeGetNetskopeCSPMResultsLFSecurityGroupPort22:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-4-1-SecurityGroups22-GetResultsFromNetskope'
 
-  CIS14039VPCFlowLogsLambdaRole:
+  EventRuleScheduledSecurityGroupPort3389: 
+    Condition: CIS12042SecurityGroupsPort3389Enabled
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Properties: 
+      Name: CIS-1-2-0-4-2-SecurityGroups3389-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - port 3389 wide open rule"
+      ScheduleExpression: "rate(10 minutes)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: .
+            Fn::GetAtt: 
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389","rule_short_name":"CIS-1-2-0-4-1"}'
+  
+  PermissionToInvokeGetNetskopeCSPMResultsLFSecurityGroupPort3389:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-4-2-SecurityGroups3389-GetResultsFromNetskope'
+     
+  CIS12029VPCFlowLogsLambdaRole:
       Type: 'AWS::IAM::Role'
+      Condition: CIS12029VPCFlowLogsEnabled
       Properties: 
-        RoleName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsLambdaRole_${AWS::Region}"
+        RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsLambdaRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: CIS-1-4-0-3-9-VPCFlowLogsLambdaRole
+            Value: CIS-1-2-0-2-9-VPCFlowLogsLambdaRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -158,7 +248,7 @@ Resources:
                 - sts:AssumeRole
         Path: '/'
         Policies:
-            - PolicyName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsLambdaPolicy_${AWS::Region}"
+            - PolicyName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsLambdaPolicy_${AWS::Region}"
               PolicyDocument:
                 Statement:
                   - Effect: Allow
@@ -178,17 +268,18 @@ Resources:
                           - '*'
                         
             
-  CIS14039VPCFlowLogsLambda:
+  CIS12029VPCFlowLogsLambda:
+      Condition: CIS12029VPCFlowLogsEnabled
       Type: 'AWS::Lambda::Function'
-      DependsOn: CIS14039VPCFlowLogsLambdaRole
+      DependsOn: CIS12029VPCFlowLogsLambdaRole
       Properties:
         Description: >-
-          This lambda function called for the Netskope findings for CIS-1-4-0-3-9 and enables VPC flow logs.
+          This lambda function called for the Netskope findings for CIS-1-2-0-2-9 and enables VPC flow logs.
         Handler: 'lambda_function.lambda_handler'
-        Role: !GetAtt CIS14039VPCFlowLogsLambdaRole.Arn
+        Role: !GetAtt CIS12029VPCFlowLogsLambdaRole.Arn
         Code:
-          S3Bucket: !FindInMap ["SourceCode", "General", "S3Bucket"]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-4-0-3-9-EnableVPCFlowLogsLambda.zip']]
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-2-9-EnableVPCFlowLogsLambda.zip']]
         Environment:
           Variables:
             AWS_PARTITION: aws
@@ -199,13 +290,14 @@ Resources:
         Timeout: 300
         Tags: 
           - Key: Type
-            Value: CIS14039VPCFlowLogsLambda
+            Value: CIS12029VPCFlowLogsLambda
 
-  PermissionToInvokeCIS14039VPCFlowLogsLambda: 
+  PermissionToInvokeCIS12029VPCFlowLogsLambda: 
+    Condition: CIS12029VPCFlowLogsEnabled
     Type: AWS::Lambda::Permission
     Properties: 
       FunctionName: 
-        Ref: "CIS14039VPCFlowLogsLambda"
+        Ref: "CIS12029VPCFlowLogsLambda"
       Action: "lambda:InvokeFunction"
       Principal: s3.amazonaws.com
       SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
@@ -318,22 +410,24 @@ Resources:
       Runtime: python3.6
       Timeout: 50
 
-  CIS14039VPCFlowLogsPutS3BucketEventLambdaFunctionTrigger:
+  CIS12029VPCFlowLogsPutS3BucketEventLambdaFunctionTrigger:
     Type: 'Custom::LambdaTrigger'
-    DependsOn: PermissionToInvokeCIS14039VPCFlowLogsLambda
+    Condition: CIS12029VPCFlowLogsEnabled
+    DependsOn: PermissionToInvokeCIS12029VPCFlowLogsLambda
     Properties:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
-      LambdaArn: !GetAtt CIS14039VPCFlowLogsLambda.Arn
+      LambdaArn: !GetAtt CIS12029VPCFlowLogsLambda.Arn
       Bucket: !Ref AssesmentResultsS3Bucket
-      prefix: "CIS-1-4-0-3-9"
+      prefix: "CIS-1-2-0-2-9"
 
-  CIS12041SecurityGroupsPort22LambdaRole:
+  CIS12041SecurityGroupsLambdaRole:
+      Condition: CIS12041SecurityGroupsEnabled
       Type: 'AWS::IAM::Role'
       Properties: 
-        RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsPort22LambdaRole_${AWS::Region}"
+        RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsLambdaRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: CIS-1-2-0-4-1-SecurityGroupsPort22LambdaRole
+            Value: CIS-1-2-0-4-1-SecurityGroupsLambdaRole
         AssumeRolePolicyDocument:
           Statement:
             - Effect: Allow
@@ -344,7 +438,7 @@ Resources:
                 - sts:AssumeRole
         Path: '/'
         Policies:
-            - PolicyName: !Sub "CIS-1-2-0-4-1-SecurityGroupsPort22LambdaPolicy_${AWS::Region}"
+            - PolicyName: !Sub "CIS-1-2-0-4-1-SecurityGroupsLambdaPolicy_${AWS::Region}"
               PolicyDocument:
                 Statement:
                   - Effect: Allow
@@ -363,17 +457,18 @@ Resources:
                         - - !GetAtt AssesmentResultsS3Bucket.Arn
                           - '*'
             
-  CIS12041SecurityGroupsPort22Lambda:
+  CIS12041SecurityGroupsLambda:
+      Condition: CIS12041SecurityGroupsEnabled
       Type: 'AWS::Lambda::Function'
-      DependsOn: CIS12041SecurityGroupsPort22LambdaRole
+      DependsOn: CIS12041SecurityGroupsLambdaRole
       Properties:
         Description: >-
-          This lambda function called for the Netskope findings for CIS-1-2-0-4-1 and disables wide open port 22 in the security groups.
+          This lambda function called for the Netskope findings for CIS-1-2-0-4-1 and disables wide open port 22 or 3389 in the security groups.
         Handler: 'lambda_function.lambda_handler'
-        Role: !GetAtt CIS12041SecurityGroupsPort22LambdaRole.Arn
+        Role: !GetAtt CIS12041SecurityGroupsLambdaRole.Arn
         Code:
-          S3Bucket: !FindInMap ["SourceCode", "General", "S3Bucket"]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-4-1-SecurityGroupsPort22Lambda.zip']]
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-4-1-SecurityGroupsLambda.zip']]
         Environment:
           Variables:
             AWS_PARTITION: aws
@@ -384,42 +479,46 @@ Resources:
         Timeout: 300
         Tags: 
           - Key: Type
-            Value: CIS12041SecurityGroupsPort22Lambda
+            Value: CIS12041SecurityGroupsLambda
 
-  PermissionToInvokeCIS12041SecurityGroupsPort22Lambda: 
+  PermissionToInvokeCIS12041SecurityGroupsLambda: 
+    Condition: CIS12041SecurityGroupsEnabled
     Type: AWS::Lambda::Permission
     Properties: 
       FunctionName: 
-        Ref: "CIS12041SecurityGroupsPort22Lambda"
+        Ref: "CIS12041SecurityGroupsLambda"
       Action: "lambda:InvokeFunction"
       Principal: s3.amazonaws.com
       SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
 
-  CIS12041SecurityGroupsPort22PutS3BucketEventLambdaFunctionTrigger:
+  CIS12041SecurityGroupsPutS3BucketEventLambdaFunctionTrigger:
+    Condition: CIS12041SecurityGroupsEnabled
     Type: 'Custom::LambdaTrigger'
-    DependsOn: PermissionToInvokeCIS12041SecurityGroupsPort22Lambda
+    DependsOn: PermissionToInvokeCIS12041SecurityGroupsLambda
     Properties:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
-      LambdaArn: !GetAtt CIS12041SecurityGroupsPort22Lambda.Arn
+      LambdaArn: !GetAtt CIS12041SecurityGroupsLambda.Arn
       Bucket: !Ref AssesmentResultsS3Bucket
       prefix: "CIS-1-2-0-4-1"
-
-  
 
 Outputs:
   AssesmentResultsS3Bucket:
     Value: !Ref AssesmentResultsS3Bucket
     Description: Name of the Netskope Security Assesment results S3 bucket
-  CIS14039VPCFlowLogsLambdaRole:
+  CIS12029VPCFlowLogsLambdaRole:
+    Condition: CIS12029VPCFlowLogsEnabled
     Description: VPC Flow logs remediation Lambda Execution Role
-    Value: !GetAtt CIS14039VPCFlowLogsLambdaRole.Arn
-  CIS14039VPCFlowLogsLambda:
+    Value: !GetAtt CIS12029VPCFlowLogsLambdaRole.Arn
+  CIS12029VPCFlowLogsLambda:
+    Condition: CIS12029VPCFlowLogsEnabled
     Description: Lambda to Enable VPC Flow Logs
-    Value: !GetAtt CIS14039VPCFlowLogsLambda.Arn
-  CIS12041SecurityGroupsPort22LambdaRole:
-    Description: Security Groups port 22 remediation Lambda Execution Role
-    Value: !GetAtt CIS12041SecurityGroupsPort22LambdaRole.Arn
-  CIS12041SecurityGroupsPort22Lambda:
-    Description: Lambda to disable wode open port 22 in Security Groups
-    Value: !GetAtt CIS12041SecurityGroupsPort22Lambda.Arn
+    Value: !GetAtt CIS12029VPCFlowLogsLambda.Arn
+  CIS12041SecurityGroupsLambdaRole:
+    Condition: CIS12041SecurityGroupsEnabled
+    Description: Security Groups port 22 or 3389 remediation Lambda Execution Role
+    Value: !GetAtt CIS12041SecurityGroupsLambdaRole.Arn
+  CIS12041SecurityGroupsLambda:
+    Condition: CIS12041SecurityGroupsEnabled
+    Description: Lambda to disable wode open port 22 or 3389 in Security Groups
+    Value: !GetAtt CIS12041SecurityGroupsLambda.Arn
   

@@ -14,13 +14,13 @@ Parameters:
     Type: String
 
 Resources:
-  CIS14039VPCFlowLogsRole:
+  CIS12039VPCFlowLogsRole:
       Type: 'AWS::IAM::Role'
       Properties: 
-        RoleName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+        RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+            Value: !Sub "CIS-1-2-0-2-9-VPCFlowLogsRole_${AWS::Region}"
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
@@ -33,7 +33,7 @@ Resources:
 
         Path: '/'
         Policies:
-            - PolicyName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+            - PolicyName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsRole_${AWS::Region}"
               PolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -47,26 +47,26 @@ Resources:
                     Resource:
                       - "*"
 
-  CIS14039VPCFlowLogsTargetRole:
+  CIS12039VPCFlowLogsTargetRole:
       Type: 'AWS::IAM::Role'
       Properties: 
-        RoleName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetRole_${AWS::Region}"
+        RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsTargetRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetRole_${AWS::Region}"
+            Value: !Sub "CIS-1-2-0-2-9-VPCFlowLogsTargetRole_${AWS::Region}"
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
             - Effect: Allow
               Principal:
                 AWS: 
-                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-4-0-3-9-VPCFlowLogsLambdaRole_${AWS::Region}"
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-2-9-VPCFlowLogsLambdaRole_${AWS::Region}"
               Action:
                 - sts:AssumeRole
 
         Path: '/'
         Policies:
-            - PolicyName: !Sub "CIS-1-4-0-3-9-VPCFlowLogsTargetPolicy_${AWS::Region}"
+            - PolicyName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsTargetPolicy_${AWS::Region}"
               PolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -87,28 +87,28 @@ Resources:
                     Action:
                       - "iam:PassRole"
                     Resource:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-4-0-3-9-VPCFlowLogsRole_${AWS::Region}"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-2-9-VPCFlowLogsRole_${AWS::Region}"
                       
-  CIS12041SecurityGroupsPort22TargetRole:
+  CIS12041SecurityGroupsTargetRole:
       Type: 'AWS::IAM::Role'
       Properties: 
-        RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsPort22TargetRole_${AWS::Region}"
+        RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsTargetRole_${AWS::Region}"
         Tags: 
           - Key: Type
-            Value: !Sub "CIS-1-2-0-4-1-SecurityGroupsPort22TargetRole_${AWS::Region}"
+            Value: !Sub "CIS-1-2-0-4-1-SecurityGroupsTargetRole_${AWS::Region}"
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
             - Effect: Allow
               Principal:
                 AWS: 
-                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-4-1-SecurityGroupsPort22LambdaRole_${AWS::Region}"
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-4-1-SecurityGroupsLambdaRole_${AWS::Region}"
               Action:
                 - sts:AssumeRole
 
         Path: '/'
         Policies:
-            - PolicyName: !Sub "CIS-1-2-0-4-1-SecurityGroupsPort22TargetPolicy_${AWS::Region}"
+            - PolicyName: !Sub "CIS-1-2-0-4-1-SecurityGroupsTargetPolicy_${AWS::Region}"
               PolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -132,16 +132,16 @@ Resources:
                     Action:
                       - "iam:PassRole"
                     Resource:
-                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-4-1-SecurityGroupsPort22TargetPolicy_${AWS::Region}"
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-4-1-SecurityGroupsTargetRole_${AWS::Region}"
 
 Outputs:
-  CIS14039VPCFlowLogsRole:
-    Value: !Ref CIS14039VPCFlowLogsRole
+  CIS12039VPCFlowLogsRole:
+    Value: !Ref CIS12039VPCFlowLogsRole
     Description: Roles to be used for the VPC Flow Logs delivery
-  CIS14039VPCFlowLogsTargetRole:
-    Value: !Ref CIS14039VPCFlowLogsTargetRole
+  CIS12039VPCFlowLogsTargetRole:
+    Value: !Ref CIS12039VPCFlowLogsTargetRole
     Description: VPC Flow Logs remediation role
-  CIS12041SecurityGroupsPort22TargetRole:
-    Value: !Ref CIS12041SecurityGroupsPort22TargetRole
+  CIS12041SecurityGroupsTargetRole:
+    Value: !Ref CIS12041SecurityGroupsTargetRole
     Description: Roles to be used for the Security Group remediation
   

@@ -61,15 +61,13 @@ def lambda_handler(event, context):
                 except Exception as e:
                     logger.error(e)
                     
-                vpcFlowLogGroup = "VPCFlowLogs/" + resource_id + lambdaFunctionSeshToken[0:32]        
-               
                 try:
                     confirmFlowlogs = ec2.describe_flow_logs(
                         DryRun=False,
                         Filters=[
                             {
-                                'Name': 'log-group-name',
-                                'Values': [vpcFlowLogGroup]
+                                'Name': 'resource-id',
+                                'Values': [resource_id]
                             },
                         ]
                     )
@@ -81,6 +79,8 @@ def lambda_handler(event, context):
                             continue
                 except Exception as e:
                     logger.error(e)
+                    
+                vpcFlowLogGroup = "VPCFlowLogs/" + resource_id + lambdaFunctionSeshToken[0:32]        
                
                 try:
                     create_log_grp = cwl.create_log_group(logGroupName=vpcFlowLogGroup)
@@ -131,3 +131,4 @@ def lambda_handler(event, context):
     except Exception as e:
         logger.error(e)
         raise e
+    

@@ -17,7 +17,7 @@ import urllib
 LOG_LEVEL = os.getenv('LOGLEVEL', 'info')
 logger = Logger(loglevel=LOG_LEVEL)
 
-LAMBDA_ROLE = 'CIS-1-2-0-4-1-VecurityGroupsPort22TargetRole'
+LAMBDA_ROLE = 'CIS-1-2-0-4-1-SecurityGroupsTargetRole'
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 AWS_PARTITION = os.getenv('AWS_PARTITION', 'aws')
 LAMBDA_ROLE += '_' + AWS_REGION

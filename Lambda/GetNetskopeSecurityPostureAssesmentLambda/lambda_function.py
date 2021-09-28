@@ -121,8 +121,3 @@ def get_secret(secret_arn):
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
         secret = get_secret_value_response['SecretString']
     return(secret)
-      
-            
-
-
-
