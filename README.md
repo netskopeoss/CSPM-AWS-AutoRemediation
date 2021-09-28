@@ -10,13 +10,18 @@ You can deploy the framework as is or customize it to mitigate other security vi
 
 ![](.//media/AWS-autoremediation.png)
 
+Note, that you need to deploy this solution in each AWS region you opted in for. It’s recommended to deploy the remediation functions on the delegated security management account. You can choose to deploy them on the same account that’s been used as delegated administrator for Amazon GuardDuty, AWS Security Hub, or another delegated AWS account. Following AWS best security practices, it’s not recommended to deploy the solution on the AWS Organization Management account. Deployment of the remediation functions done using AWS-autoremediation CloudFormation template.
+To remediate security violations findings across all your organization’s accounts, you need to deploy the cross-account AWS IAM roles on all accounts, including the delegated security management account. Cross-account roles deployed using AWS-autoremediation-target CloudFormation template. You can deploy it using AWS CloudFormation StackSet or using your cloud orchestration tools. 
+As a pre-requisite, you need to enable AWS Systems Manager (AWS SSM) on all your accounts and AWS regions. AWS SSM Automation used to remediate violations for such compliance rules as rule 4.1 of the CIS AWS Foundations standard “Ensure no security groups allow ingress from 0.0.0.0/0 to port 22“.
+
+
 Deployment steps.
-1.  Deploy the AWS-autoremediation CloudFormation stack on the Delegated Auto-Remediation account. 
+1.  Deploy the AWS-autoremediation CloudFormation stack on the delegate security management account. 
 
     a.  Clone this repository to your machine. 
-
+```
     git clone https://github.com/netskopeoss/CSPM-AWS-AutoRemediation.git
-
+```
     b.  Change the region to the one you are deploring the solution. 
     c.  In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
     d.  Choose Upload a template file and click on Choose file.
@@ -34,7 +39,7 @@ Deployment steps.
 2.  Deploy the AWS-autoremediation-target CloudFormation stack on each of your organization’s accounts, including the Delegated Auto-Remediation account. 
 You can deploy it using AWS CloudFormation StackSet or using your own automation tools.
 
-To deploy it on the individual account:
+To deploy it on the individual target account:
 
     a.  In the AWS CloudFormation management console click Create Stack and choose With new resources (standard).
     b.  Choose Upload a template file and click on Choose file.
