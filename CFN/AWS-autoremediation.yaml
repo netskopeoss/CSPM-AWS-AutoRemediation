@@ -418,7 +418,7 @@ Resources:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
       LambdaArn: !GetAtt CIS12029VPCFlowLogsLambda.Arn
       Bucket: !Ref AssesmentResultsS3Bucket
-      prefix: "CIS-1-2-0-2-9"
+      prefix: "CIS-1-2-0-2-9/"
 
   CIS12041SecurityGroupsLambdaRole:
       Condition: CIS12041SecurityGroupsEnabled
@@ -499,7 +499,7 @@ Resources:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
       LambdaArn: !GetAtt CIS12041SecurityGroupsLambda.Arn
       Bucket: !Ref AssesmentResultsS3Bucket
-      prefix: "CIS-1-2-0-4-1"
+      prefix: "CIS-1-2-0-4-1/"
 
 Outputs:
   AssesmentResultsS3Bucket:

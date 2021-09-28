@@ -68,8 +68,7 @@ def get_status(rule_name, token, limit, skip):
     payload = {'token' : token, 'cloud_provider' : 'aws', 'status' : 'Failed', 'muted' : 'No', 'rule_name' : rule_name, 'limit' : limit, 'skip' : skip}
     
     logger.info('Calling Netskope API for ' + rule_name )
- 
-   
+  
     r = requests.get(get_url, params=payload)
     
     return r.json()['data']

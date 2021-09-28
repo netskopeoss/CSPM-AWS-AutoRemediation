@@ -55,14 +55,17 @@ Resources:
           - Key: Type
             Value: !Sub "CIS-1-2-0-2-9-VPCFlowLogsTargetRole_${AWS::Region}"
         AssumeRolePolicyDocument:
-          Version: "2012-10-17"
+          Version: 2012-10-17
           Statement:
             - Effect: Allow
               Principal:
-                AWS: 
-                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-2-9-VPCFlowLogsLambdaRole_${AWS::Region}"
+                AWS:
+                  - !Sub >-
+                    arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-2-9-VPCFlowLogsLambdaRole_${AWS::Region}
+                Service:
+                  - ssm.amazonaws.com
               Action:
-                - sts:AssumeRole
+                - 'sts:AssumeRole'
 
         Path: '/'
         Policies:
