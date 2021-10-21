@@ -17,11 +17,12 @@ import urllib
 LOG_LEVEL = os.getenv('LOGLEVEL', 'info')
 logger = Logger(loglevel=LOG_LEVEL)
 
-LAMBDA_ROLE = 'CIS-1-2-0-4-1-SecurityGroupsTargetRole'
+assume_role = 'CIS-1-4-0-3-9-VPCFlowLogsTargetRole'
+VPCFlowLogs_role = 'CIS-1-4-0-3-9-VPCFlowLogsRole'
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 AWS_PARTITION = os.getenv('AWS_PARTITION', 'aws')
-LAMBDA_ROLE += '_' + AWS_REGION
-BOTO_CONFIG = Config(
+assume_role += '_' + AWS_REGION
+boto_config = Config(
     retries={
         'max_attempts': 10
     },
@@ -36,6 +37,7 @@ def lambda_handler(event, context):
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
     input_file = os.path.join(bucket,key)
+    logger.info('Got input file: '+input_file)
     
 
     try:
@@ -46,23 +48,86 @@ def lambda_handler(event, context):
                 resource_id = row[1]
                 region = row[2]
                 logger.info('Got event: '+account_id+' '+ resource_id)
-              
-                sess = BotoSession(account_id, LAMBDA_ROLE)
-                ssm = sess.client('ssm')
-                logger.debug('Opened SSM session')
-   
-                response = ssm.start_automation_execution(
-                    DocumentName='AWS-DisablePublicAccessForSecurityGroup',
-                    DocumentVersion='1',
-                    Parameters={
-                        'GroupId': [ resource_id ],
-                        'AutomationAssumeRole': ['arn:' + AWS_PARTITION + ':iam::' + \
-                           account_id + ':role/' + LAMBDA_ROLE]
-                    }
-                )
-                logger.debug(response)
-                logger.info('Remediation was successfully invoked via AWS Systems Manager for ' +account_id+' '+ resource_id )
+            
+                lambdaFunctionSeshToken = os.getenv('AWS_SESSION_TOKEN', '')  
+            
+                DeliverLogsPermissionArn = 'arn:' + AWS_PARTITION + ':iam::' + account_id + \
+                    ':role/'+VPCFlowLogs_role+'_'+AWS_REGION
+    
+                try:
+                    sess = BotoSession(account_id, assume_role)
+                    cwl = sess.client('logs')
+                    ec2 = sess.client('ec2')
+                except Exception as e:
+                    logger.error(e)
+                    
+                vpcFlowLogGroup = "VPCFlowLogs/" + resource_id + lambdaFunctionSeshToken[0:32]        
+               
+                try:
+                    confirmFlowlogs = ec2.describe_flow_logs(
+                        DryRun=False,
+                        Filters=[
+                            {
+                                'Name': 'log-group-name',
+                                'Values': [vpcFlowLogGroup]
+                            },
+                        ]
+                    )
+                    logger.debug(confirmFlowlogs)
+                    if len(confirmFlowlogs['FlowLogs']):
+                        flowStatus = str(confirmFlowlogs['FlowLogs'][0]['FlowLogStatus'])
+                        if flowStatus == 'ACTIVE':
+                            logger.info('Remediation was already completed earlier for ' +account_id+' '+ resource_id )
+                            continue
+                except Exception as e:
+                    logger.error(e)
+               
+                try:
+                    create_log_grp = cwl.create_log_group(logGroupName=vpcFlowLogGroup)
+                except Exception as e:
+                    logger.error(e)
+                    
+                # wait for CWL creation to propagate
+                time.sleep(3)
+                # create VPC Flow Logging
+                try:
+                    enableFlowlogs = ec2.create_flow_logs(
+                        DryRun=False,
+                        DeliverLogsPermissionArn=DeliverLogsPermissionArn,
+                        LogGroupName=vpcFlowLogGroup,
+                        ResourceIds=[resource_id],
+                        ResourceType='VPC',
+                        TrafficType='ALL',
+                        LogDestinationType='cloud-watch-logs'
+                    )
+                    logger.debug(enableFlowlogs)
+                except Exception as e:
+                    logger.error(e)
+                  
+                time.sleep(2)
+                try:
+                    confirmFlowlogs = ec2.describe_flow_logs(
+                        DryRun=False,
+                        Filters=[
+                            {
+                                'Name': 'log-group-name',
+                                'Values': [vpcFlowLogGroup]
+                            },
+                        ]
+                    )
+                    logger.debug(confirmFlowlogs)
+                    flowStatus = str(confirmFlowlogs['FlowLogs'][0]['FlowLogStatus'])
+                    if flowStatus == 'ACTIVE':
+                        logger.info('Remediation was successfully invoked for ' +account_id+' '+ resource_id )
+                        
+                    else:
+                        
+                        logger.error(e)
+                      
+                except Exception as e:
+                    logger.error(e)
+                    
+                    
     except Exception as e:
         logger.error(e)
-        logger.error('Error getting object from bucket. Make sure they exist and your bucket is in the same region as this function. '+ input_file)
         raise e
