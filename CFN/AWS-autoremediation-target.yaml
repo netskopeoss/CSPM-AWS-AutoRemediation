@@ -6,16 +6,145 @@ Metadata:
     ParameterLabels:
       AWSManagementAccount:
         default: AWS Management Account ID
+      CIS12029VPCFlowLogs:
+        default: CIS-1-2-0-2-9 - VPC Flow logs remediation
+      CIS12041SecurityGroupsPort22:
+        default: CIS-1-2-0-4-1 - wide open port 22 remediation
+      CIS12042SecurityGroupsPort3389:
+        default: CIS-1-2-0-4-2 - wide open port 3389 remediation
+      BPR38RDSSnapshotsPublic:
+        default: BPR-3-8 - RDSInstance public snapshots remediation
+      BPR19RedShiftClusterPublic:
+        default: BPR-1-9 - public RedShift Cluster remediation
+      CIS12022CloudTrailLogFileValidation:
+        default: CIS-1-2-0-2-2 - CloudTrail Log Files remediation
+      BPR06DefaultNACL:
+        default: BPR-0-6 - Default Network ACL all ingress traffic remediation
+      BPR010NACLAssociatedWithSubnet:
+        default: BPR-0-1-0 - Network ACL associated with subnet all ingress traffic remediation
+      BPR100S3BucketPublicAccess:
+        default: BPR-1-0-0 - S3 bucket public access remediation
+      CIS12014AccessKeyRotation:
+        default: CIS-1-2-0-1-4 - Inactive access keys that are created before 90 days remediation
 
 Parameters:
   AWSManagementAccount:
     Default: ""
     Description: 'AWS Account choosen for autoremediation management'
     Type: String
+  CIS12029VPCFlowLogs:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-2-9  - enable VPC flow logs on all VPCs'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12041SecurityGroupsPort22:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-4-1  - disable SSH access from 0.0.0.0/0'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12042SecurityGroupsPort3389:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-4-2  - disable RDP access from 0.0.0.0/0'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR38RDSSnapshotsPublic:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-3-8  - set DB snapshot visibility as private'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR19RedShiftClusterPublic:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-1-9  - set RedShift Cluster visibility as private'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12022CloudTrailLogFile:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-2-2  - enable CloudTrail Log File validation'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR06DefaultNACL:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-0-6 - remove rule from Default Network ACL which allows all trafic'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR010NACLAssociatedWithSubnet:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-0-1-0 - remove rule from Network ACL associated with subnet which allows all trafic'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR100S3BucketPublicAccess:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-1-0-0  - enable block public access settings of the bucket'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12014AccessKeyRotation:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-1-4 - Inactive access keys that are created before 90 days'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+
+Conditions:
+  CIS12029VPCFlowLogsEnabled: !Equals
+      - !Ref CIS12029VPCFlowLogs
+      - 'yes'
+  CIS12041SecurityGroupsPort22Enabled: !Equals
+      - !Ref CIS12041SecurityGroupsPort22
+      - 'yes'
+  CIS12042SecurityGroupsPort3389Enabled: !Equals
+      - !Ref CIS12042SecurityGroupsPort3389
+      - 'yes'
+  CIS12041SecurityGroupsEnabled: !Or
+    - !Condition CIS12041SecurityGroupsPort22Enabled
+    - !Condition CIS12042SecurityGroupsPort3389Enabled
+  BPR38RDSSnapshotsPublicEnabled: !Equals
+      - !Ref BPR38RDSSnapshotsPublic
+      - 'yes'
+  BPR19RedShiftClusterPublicEnabled: !Equals
+      - !Ref BPR19RedShiftClusterPublic
+      - 'yes'
+  CIS12022CloudTrailLogFileEnabled: !Equals
+      - !Ref CIS12022CloudTrailLogFile
+      - 'yes'
+  BPR06DefaultNACLEnabled: !Equals
+      - !Ref BPR06DefaultNACL
+      - 'yes'
+  BPR010NACLAssociatedWithSubnetEnabled: !Equals
+      - !Ref BPR010NACLAssociatedWithSubnet
+      - 'yes'
+  BPR06NACLEnabled: !Or
+    - !Condition BPR06DefaultNACLEnabled
+    - !Condition BPR010NACLAssociatedWithSubnetEnabled
+  BPR100S3BucketPublicAccessEnabled: !Equals
+      - !Ref BPR100S3BucketPublicAccess
+      - 'yes'
+  CIS12014AccessKeyRotationEnabled: !Equals
+      - !Ref CIS12014AccessKeyRotation
+      - 'yes'
 
 Resources:
-  CIS12039VPCFlowLogsRole:
+  CIS12029VPCFlowLogsRole:
       Type: 'AWS::IAM::Role'
+      Condition: CIS12029VPCFlowLogsEnabled
       Properties: 
         RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsRole_${AWS::Region}"
         Tags: 
@@ -47,8 +176,9 @@ Resources:
                     Resource:
                       - "*"
 
-  CIS12039VPCFlowLogsTargetRole:
+  CIS12029VPCFlowLogsTargetRole:
       Type: 'AWS::IAM::Role'
+      Condition: CIS12029VPCFlowLogsEnabled
       Properties: 
         RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsTargetRole_${AWS::Region}"
         Tags: 
@@ -94,6 +224,7 @@ Resources:
                       
   CIS12041SecurityGroupsTargetRole:
       Type: 'AWS::IAM::Role'
+      Condition: CIS12041SecurityGroupsEnabled
       Properties: 
         RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsTargetRole_${AWS::Region}"
         Tags: 
@@ -104,6 +235,8 @@ Resources:
           Statement:
             - Effect: Allow
               Principal:
+                Service:
+                  - ssm.amazonaws.com
                 AWS: 
                   - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-4-1-SecurityGroupsLambdaRole_${AWS::Region}"
               Action:
@@ -137,14 +270,276 @@ Resources:
                     Resource:
                       - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-4-1-SecurityGroupsTargetRole_${AWS::Region}"
 
+  BPR38RDSSnapshotsPublicTargetRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR38RDSSnapshotsPublicEnabled
+      Properties: 
+        RoleName: !Sub "BPR-3-8-RDSSnapshotsPublicTargetRole_${AWS::Region}"
+        Tags: 
+          - Key: Type
+            Value: !Sub "BPR-3-8-RDSSnapshotsPublicTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: 
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/BPR-3-8-RDSSnapshotsPublicLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-3-8-RDSSnapshotsPublicTargetPolicy_${AWS::Region}"
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "rds:DescribeDBSnapshots"
+                      - "rds:ModifyDBSnapshotAttribute"
+                      - "rds:DescribeDBSnapshotAttributes"
+                      - "rds:DescribeDBInstances"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/BPR-3-8-RDSSnapshotsPublicTargetRole_${AWS::Region}"
+
+  BPR19RedShiftClusterPublicTargetRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR19RedShiftClusterPublicEnabled
+      Properties:
+        RoleName: !Sub "BPR-1-9-RedShiftClusterPublicTargetRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: !Sub "BPR-1-9-RedShiftClusterPublicTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - ssm.amazonaws.com
+                AWS:
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/BPR-1-9-RedShiftClusterPublicLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-1-9-RedShiftClusterPublicTargetPolicy_${AWS::Region}"
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "redshift:DescribeClusters"
+                      - "redshift:ModifyCluster"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "ssm:StartAutomationExecution"
+                      - "ssm:GetAutomationExecution"
+                    Resource:
+                      - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:document/AWSConfigRemediation-DisablePublicAccessToRedshiftCluster"
+                      - !Sub "arn:aws:ssm:${AWS::Region}:*:automation-definition/*"
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/BPR-1-9-RedShiftClusterPublicTargetRole_${AWS::Region}"
+
+  CIS12022CloudTrailLogFileValidationTargetRole:
+      Type: 'AWS::IAM::Role'
+      Condition: CIS12022CloudTrailLogFileEnabled
+      Properties:
+        RoleName: !Sub "CIS-1-2-0-2-2-CloudTrailLogFileTargetRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: !Sub "CIS-1-2-0-2-2-CloudTrailLogFileTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - ssm.amazonaws.com
+                AWS:
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-2-2-CloudTrailLogFileLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-2-0-2-2-CloudTrailLogFileValidationTargetPolicy_${AWS::Region}"
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "cloudtrail:UpdateTrail"
+                      - "cloudtrail:GetTrail"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "ssm:StartAutomationExecution"
+                      - "ssm:GetAutomationExecution"
+                    Resource:
+                      - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:document/AWSConfigRemediation-EnableCloudTrailLogFileValidation"
+                      - !Sub "arn:aws:ssm:${AWS::Region}:*:automation-definition/*"
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-2-2-CloudTrailLogFileTargetRole_${AWS::Region}"
+
+  BPR06NACLTargetRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR06NACLEnabled
+      Properties:
+        RoleName: !Sub "BPR-0-6-NACLTargetRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: !Sub "BPR-0-6-NACLTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS:
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/BPR-0-6-NACLLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-0-6-NACLTargetRole_${AWS::Region}"
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "ec2:DescribeNetworkAcls"
+                      - "ec2:DeleteNetworkAclEntry"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/BPR-0-6-NACLTargetRole_${AWS::Region}"
+
+  BPR100S3BucketPublicAccessTargetRole:
+    Type: 'AWS::IAM::Role'
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Properties:
+      RoleName: !Sub "BPR-1-0-0-S3BucketPublicAccessTargetRole_${AWS::Region}"
+      Tags:
+        - Key: Type
+          Value: !Sub "BPR-1-0-0-S3BucketPublicAccessTargetRole_${AWS::Region}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${AWSManagementAccount}:role/BPR-1-0-0-S3BucketPublicAccessLambdaRole_${AWS::Region}"
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: !Sub "BPR-1-0-0-S3BucketPublicAccessTargetRole_${AWS::Region}"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetBucketPublicAccessBlock"
+                  - "s3:PutBucketPublicAccessBlock"
+                Resource:
+                  - '*'
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Resource:
+                  - !Sub "arn:aws:iam::${AWS::AccountId}:role/BPR-1-0-0-S3BucketPublicAccessTargetRole_${AWS::Region}"
+
+  CIS12014AccessKeyRotationTargetRole:
+      Type: 'AWS::IAM::Role'
+      Condition: CIS12014AccessKeyRotationEnabled
+      Properties:
+        RoleName: !Sub "CIS-1-2-0-1-4-AccessKeyRotationTargetRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: !Sub "CIS-1-2-0-1-4-AccessKeyRotationTargetRole_${AWS::Region}"
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS:
+                  - !Sub "arn:aws:iam::${AWSManagementAccount}:role/CIS-1-2-0-1-4-AccessKeyRotationLambdaRole_${AWS::Region}"
+              Action:
+                - sts:AssumeRole
+
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-2-0-1-4-AccessKeyRotationTargetRole_${AWS::Region}"
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "iam:UpdateAccessKey"
+                      - "iam:ListAccessKeys"
+                    Resource:
+                      - '*'
+                  - Effect: Allow
+                    Action:
+                      - "iam:PassRole"
+                    Resource:
+                      - !Sub "arn:aws:iam::${AWS::AccountId}:role/CIS-1-2-0-1-4-AccessKeyRotationTargetRole_${AWS::Region}"
+
 Outputs:
-  CIS12039VPCFlowLogsRole:
-    Value: !Ref CIS12039VPCFlowLogsRole
+  CIS12029VPCFlowLogsRole:
+    Condition: CIS12029VPCFlowLogsEnabled
+    Value: !Ref CIS12029VPCFlowLogsRole
     Description: Roles to be used for the VPC Flow Logs delivery
-  CIS12039VPCFlowLogsTargetRole:
-    Value: !Ref CIS12039VPCFlowLogsTargetRole
+  CIS12029VPCFlowLogsTargetRole:
+    Condition: CIS12029VPCFlowLogsEnabled
+    Value: !Ref CIS12029VPCFlowLogsTargetRole
     Description: VPC Flow Logs remediation role
   CIS12041SecurityGroupsTargetRole:
+    Condition: CIS12041SecurityGroupsEnabled
     Value: !Ref CIS12041SecurityGroupsTargetRole
     Description: Roles to be used for the Security Group remediation
+  BPR38RDSSnapshotsPublicTargetRole:
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    Value: !Ref BPR38RDSSnapshotsPublicTargetRole
+    Description: Roles to be used for the RDS snapshots public
+  BPR19RedShiftClusterPublicTargetRole:
+    Condition: BPR19RedShiftClusterPublicEnabled
+    Value: !Ref BPR19RedShiftClusterPublicTargetRole
+    Description: Roles to be used for the RedShift cluster public
+  CIS12022CloudTrailLogFileValidationTargetRole:
+    Condition: CIS12022CloudTrailLogFileEnabled
+    Value: !Ref CIS12022CloudTrailLogFileValidationTargetRole
+    Description: Roles to be used for the CloudTrail Log File Validation
+  BPR06NACLTargetRole:
+    Condition: BPR06NACLEnabled
+    Value: !Ref BPR06NACLTargetRole
+    Description: Roles to be used for the Network ACL remediation
+  BPR100S3BucketPublicAccessTargetRole:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Value: !Ref BPR100S3BucketPublicAccessTargetRole
+    Description: Roles to be used for the S3 bucket public access remediation
+  CIS12014AccessKeyRotationTargetRole:
+    Condition: CIS12014AccessKeyRotationEnabled
+    Value: !Ref CIS12014AccessKeyRotationTargetRole
+    Description: Roles to be used for the access key inactivation
   

@@ -4,9 +4,6 @@ from datetime import datetime, timezone
 import json
 import requests
 import os
-from os import listdir
-from os.path import isfile, join
-import base64
 from utils.logger import Logger
 
 # Set up  logger
@@ -14,67 +11,99 @@ LOG_LEVEL = os.getenv('LOGLEVEL', 'info')
 logger = Logger(loglevel=LOG_LEVEL)
 
 s3_client = boto3.client("s3")
-LOCAL_FILE_SYS = "/tmp"
 S3_BUCKET = os.environ['security_assessment_results_s3_bucket']
-tenant_fqdn = os.environ['tenant_fqdn']
+TENANT_FQDN = os.environ['tenant_fqdn']
 CHUNK_SIZE = 100
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 secret_arn = os.environ['api_token']
-AWS_REGIONS={
-  "us-east-1": "US East(N. Virginia)",
-  "us-east-2": "US East(Ohio)",
-  "us-west-1": "US West(N. California)",
-  "us-west-2": "US West(Oregon)"
+AWS_REGIONS = {
+    "us-east-1": "US East(N. Virginia)",
+    "us-east-2": "US East(Ohio)",
+    "us-west-1": "US West(N. California)",
+    "us-west-2": "US West(Oregon)",
+    "af-south-1": "Africa(Cape Town)",
+    "ap-east-1": "Asia Pacific(Hong Kong)",
+    "ap-southeast-3": "Asia Pacific(Jakarta)",
+    "ap-south-1": "Asia Pacific(Mumbai)",
+    "ap-northeast-3": "Asia Pacific(Osaka)",
+    "ap-southeast-2": "Asia Pacific(Sydney)",
+    "ap-northeast-2": "Asia Pacific(Seoul)",
+    "ap-southeast-1": "Asia Pacific(Singapore)",
+    "ap-northeast-1": "Asia Pacific(Tokyo)",
+    "ca-central-1": "Canada(Central)",
+    "eu-central-1": "EU(Frankfurt)",
+    "eu-west-1": "EU(Ireland)",
+    "eu-west-2": "EU(London)",
+    "eu-west-3": "EU(Paris)",
+    "eu-north-1": "EU(Stockholm)",
+    "eu-south-1": "EU(Milan)",
+    "sa-east-1": "South America(Sao Paulo)"
 }
 
+
 def lambda_handler(event, context):
-   
-    token = json.loads(get_secret(secret_arn))['token']
-    
-    rule_name = event['rule_name']
-    rule_short_name = event['rule_short_name']
-    
-    file_name = LOCAL_FILE_SYS + "/" + str(tenant_fqdn) + '.' + rule_short_name+'.' + datetime.now().strftime("%m%d%Y%H%M%S")
-    file = open(file_name, "w")
-    i = 0
-    y = 0
-    resp = get_status (rule_name, token, str(CHUNK_SIZE), str(i*CHUNK_SIZE))
-    logger.debug(resp)
-    while len(resp):
-        for item in resp:
-            logger.debug('Got violation for the account '+ item['account_id'] + ' account name '+ item['account_name'] + ' resource_id ' +item['resource_id'] + ' resource_name ' + item['resource_name']+' rule_name ' + item['rule_name'])
-            if item['region_name'] == AWS_REGIONS[AWS_REGION]:
-                logger.info('Got violation from this region for the account '+ item['account_id'] + ' account name '+ item['account_name'] + ' resource_id ' +item['resource_id'] + ' resource_name ' + item['resource_name']+' rule_name ' + item['rule_name'])
-                file.write(item['account_id'] +','+ item['resource_id'] +','+ item['region_name'] + "\n")
-                y=y+1
-                logger.debug("Violation is from this region")
-            else:
-                logger.debug("Violation is from another region")
-        i=i+1
-        resp = get_status (rule_name, token, str(CHUNK_SIZE), str(i*CHUNK_SIZE))
+    try:
+        token = json.loads(get_secret(secret_arn))['token']
+
+        rule_name = event['rule_name']
+        rule_short_name = event['rule_short_name']
+
+        file_name = str(TENANT_FQDN) + '.' + rule_short_name + '.' + datetime.now().strftime(
+            "%m%d%Y%H%M%S")
+        page_number = 0
+        alert_count = 0
+        resp = get_status(rule_name, token, str(CHUNK_SIZE), str(page_number * CHUNK_SIZE))
         logger.debug(resp)
-    file.close()
-    
-    logger.info('Got '+ str(y) +' total violations for the rule '+ rule_name)
-    if y:
-        files = [f for f in listdir(LOCAL_FILE_SYS) if isfile(join(LOCAL_FILE_SYS, f))]
-        for f in files:
-            s3_client.upload_file(LOCAL_FILE_SYS + "/" + f, S3_BUCKET, rule_short_name +'/'+ f)
+        file_data = ""
+        while len(resp):
+            for item in resp:
+                logger.debug('Got violation for the account ' + item['account_id'] + ' account name ' + item[
+                    'account_name'] + ' resource_id ' + item['resource_id'] + ' resource_name ' + item[
+                                 'resource_name'] + ' rule_name ' + item['rule_name'])
+                if item['region_name'] == AWS_REGIONS[AWS_REGION] or item['region_name'] == 'global':
+                    logger.info(
+                        'Got violation from this region for the account ' + item['account_id'] + ' account name ' + item[
+                            'account_name'] + ' resource_id ' + item['resource_id'] + ' resource_name ' + item[
+                            'resource_name'] + ' rule_name ' + item['rule_name'])
+                    file_data += item['account_id'] + ',' + item['resource_id'] + ',' + item[
+                        'region_name'] + "\n"
+                    alert_count = alert_count + 1
+                    logger.debug("Violation is from this region")
+                else:
+                    logger.debug("Violation is from another region")
+            page_number = page_number + 1
+            resp = get_status(rule_name, token, str(CHUNK_SIZE), str(page_number * CHUNK_SIZE))
+            logger.debug(resp)
+
+        if alert_count > 0:
+            logger.info('Got ' + str(alert_count) + ' total violations for the rule ' + rule_name)
+            file_path = rule_short_name + '/' + file_name
+            s3_client.put_object(Key=file_path, Bucket=S3_BUCKET, Body=file_data)
+        else:
+            logger.info('Got ' + str(alert_count) + ' total violations for the rule ' + rule_name)
+
+    except Exception as e:
+        logger.error(f'Error occurred while getting Netskope CSPM results. Reason: {e}')
+        raise e
 
 
 def get_status(rule_name, token, limit, skip):
-    
-    get_url = 'https://' + tenant_fqdn +'/api/v1/security_assessment'
-    payload = {'token' : token, 'cloud_provider' : 'aws', 'status' : 'Failed', 'muted' : 'No', 'rule_name' : rule_name, 'limit' : limit, 'skip' : skip}
-    
-    logger.info('Calling Netskope API for ' + rule_name )
-  
-    r = requests.get(get_url, params=payload)
-    
-    return r.json()['data']
+    try:
+        get_url = 'https://' + TENANT_FQDN + '/api/v1/security_assessment'
+        payload = {'token': token, 'cloud_provider': 'aws', 'status': 'Failed', 'muted': 'No', 'rule_name': rule_name,
+                   'limit': limit, 'skip': skip}
+
+        logger.info('Calling Netskope API for ' + rule_name)
+
+        r = requests.get(get_url, params=payload)
+
+        return r.json()['data']
+    except Exception as e:
+        logger.error(f'Error occurred while calling Netskope API.')
+        raise e
+
 
 def get_secret(secret_arn):
-    
     logger.debug(secret_arn)
     session = boto3.session.Session()
     client = session.client(
@@ -88,7 +117,7 @@ def get_secret(secret_arn):
 
     try:
         response = client.describe_secret(SecretId=secret_arn)
-        
+
         get_secret_value_response = client.get_secret_value(
             SecretId=response['Name']
         )
@@ -119,4 +148,4 @@ def get_secret(secret_arn):
         # Decrypts secret using the associated KMS CMK.
         # Depending on whether the secret is a string or binary, one of these fields will be populated.
         secret = get_secret_value_response['SecretString']
-    return(secret)
+    return (secret)

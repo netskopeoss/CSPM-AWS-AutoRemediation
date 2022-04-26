@@ -8,13 +8,28 @@ Metadata:
         default: Netskope Tenant FQDN
       NetskopeAPIToken:
         default: Netskope API v1 token
+      EventScheduleTime:
+        default: rate(30 minutes)
       CIS12029VPCFlowLogs:
         default: CIS-1-2-0-2-9 - VPC Flow logs remediation
       CIS12041SecurityGroupsPort22:
         default: CIS-1-2-0-4-1 - wide open port 22 remediation
       CIS12042SecurityGroupsPort3389:
         default: CIS-1-2-0-4-2 - wide open port 3389 remediation
-
+      BPR38RDSSnapshotsPublic:
+        default: BPR-3-8 - RDSInstance public snapshots remediation
+      BPR19RedShiftClusterPublic:
+        default: BPR-1-9 - public RedShift Cluster remediation
+      CIS12022CloudTrailLogFileValidation:
+        default: CIS-1-2-0-2-2 - CloudTrail Log Files remediation
+      BPR06DefaultNACL:
+        default: BPR-0-6 - Default Network ACL all ingress traffic remediation
+      BPR010NACLAssociatedWithSubnet:
+        default: BPR-0-1-0 - Network ACL associated with subnet all ingress traffic remediation
+      BPR100S3BucketPublicAccess:
+        default: BPR-1-0-0 - S3 bucket public access remediation
+      CIS12014AccessKeyRotation:
+        default: CIS-1-2-0-1-4 - Inactive access keys that are created before 90 days remediation
 Parameters:
   NetskopeTenantFQDN:
     Default: ""
@@ -24,6 +39,10 @@ Parameters:
     NoEcho: true
     Default: ""
     Description: 'Netskope API v1 token'
+    Type: String
+  EventScheduleTime:
+    Default: "rate(30 minutes)"
+    Description: 'The time interval at which the Netskope alerts should be polled.'
     Type: String
   CIS12029VPCFlowLogs:
     Default: 'yes'
@@ -46,7 +65,56 @@ Parameters:
       - 'yes'
       - 'no'
     Type: 'String'
-Conditions: 
+  BPR38RDSSnapshotsPublic:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-3-8  - set DB snapshot visibility as private'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR19RedShiftClusterPublic:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-1-9  - set RedShift Cluster visibility as private'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12022CloudTrailLogFile:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-2-2  - enable CloudTrail Log File validation'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR06DefaultNACL:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-0-6 - remove rule from Default Network ACL which allows all trafic'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR010NACLAssociatedWithSubnet:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-0-1-0 - remove rule from Network ACL associated with subnet which allows all trafic'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  BPR100S3BucketPublicAccess:
+    Default: 'yes'
+    Description: 'Deploy remediation for BPR-1-0-0  - enable block public access settings of the bucket'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+  CIS12014AccessKeyRotation:
+    Default: 'yes'
+    Description: 'Deploy remediation for CIS-1-2-0-1-4 - Inactive access keys that are created before 90 days'
+    AllowedValues:
+      - 'yes'
+      - 'no'
+    Type: 'String'
+Conditions:
   CIS12029VPCFlowLogsEnabled: !Equals
       - !Ref CIS12029VPCFlowLogs
       - 'yes'
@@ -56,9 +124,33 @@ Conditions:
   CIS12042SecurityGroupsPort3389Enabled: !Equals
       - !Ref CIS12042SecurityGroupsPort3389
       - 'yes'
-  CIS12041SecurityGroupsEnabled: !Or 
+  CIS12041SecurityGroupsEnabled: !Or
     - !Condition CIS12041SecurityGroupsPort22Enabled
     - !Condition CIS12042SecurityGroupsPort3389Enabled
+  BPR38RDSSnapshotsPublicEnabled: !Equals
+      - !Ref BPR38RDSSnapshotsPublic
+      - 'yes'
+  BPR19RedShiftClusterPublicEnabled: !Equals
+      - !Ref BPR19RedShiftClusterPublic
+      - 'yes'
+  CIS12022CloudTrailLogFileEnabled: !Equals
+      - !Ref CIS12022CloudTrailLogFile
+      - 'yes'
+  BPR06DefaultNACLEnabled: !Equals
+      - !Ref BPR06DefaultNACL
+      - 'yes'
+  BPR010NACLAssociatedWithSubnetEnabled: !Equals
+      - !Ref BPR010NACLAssociatedWithSubnet
+      - 'yes'
+  BPR06NACLEnabled: !Or
+    - !Condition BPR06DefaultNACLEnabled
+    - !Condition BPR010NACLAssociatedWithSubnetEnabled
+  BPR100S3BucketPublicAccessEnabled: !Equals
+      - !Ref BPR100S3BucketPublicAccess
+      - 'yes'
+  CIS12014AccessKeyRotationEnabled: !Equals
+      - !Ref CIS12014AccessKeyRotation
+      - 'yes'
 Mappings:
       SourceCode:
           General:
@@ -87,9 +179,9 @@ Resources:
 
   GetNetskopeCSPMResultsLFRole:
       Type: 'AWS::IAM::Role'
-      Properties: 
+      Properties:
         RoleName: !Sub "GetNetskopeCSPMResultsLFRole_${AWS::Region}"
-        Tags: 
+        Tags:
           - Key: Type
             Value: GetNetskopeCSPMResultsLFRole
         AssumeRolePolicyDocument:
@@ -110,6 +202,7 @@ Resources:
                       - "logs:CreateLogGroup"
                       - "logs:CreateLogStream"
                       - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
                     Resource:
                       - "*"
                   - Effect: Allow
@@ -145,23 +238,34 @@ Resources:
         Runtime: python3.8
         MemorySize: 128
         Timeout: 300
-        Tags: 
+        Tags:
           - Key: Type
             Value: GetNetskopeCSPMResultsLF
 
-  EventRuleScheduledVPCFlowLogs: 
+  NetskopeCSPMLambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - python3.8
+      Content:
+        S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+        S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'NetskopeSecurityPostureAssessmentLambdaLayer.zip']]
+      Description: "Lambda Layer for NetskopeCSPM's Lambda function"
+      LayerName: "NetskopeCSPMLambdaLayer"
+
+  EventRuleScheduledVPCFlowLogs:
     Type: AWS::Events::Rule
     DependsOn: GetNetskopeCSPMResultsLF
     Condition: CIS12029VPCFlowLogsEnabled
-    Properties: 
+    Properties:
       Name: CIS-1-2-0-2-9-VPCFlowLogs-GetResultsFromNetskope
       Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - VPC flow logs rule"
-      ScheduleExpression: "rate(10 minutes)"
+      ScheduleExpression: !Ref EventScheduleTime
       State: "ENABLED"
-      Targets: 
-        - 
-          Arn: 
-            Fn::GetAtt: 
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
               - "GetNetskopeCSPMResultsLF"
               - "Arn"
           Id: "GetNetskopeCSPMResultsLF"
@@ -169,73 +273,73 @@ Resources:
 
   PermissionToInvokeGetNetskopeCSPMResultsLFVPCFlowLogs:
     Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: 
+    Properties:
+      FunctionName:
         Ref: "GetNetskopeCSPMResultsLF"
       Action: "lambda:InvokeFunction"
       Principal: events.amazonaws.com
       SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-2-9-VPCFlowLogs-GetResultsFromNetskope'
 
-  EventRuleScheduledSecurityGroupPort22: 
+  EventRuleScheduledSecurityGroupPort22:
     Condition: CIS12041SecurityGroupsPort22Enabled
     Type: AWS::Events::Rule
     DependsOn: GetNetskopeCSPMResultsLF
-    Properties: 
+    Properties:
       Name: CIS-1-2-0-4-1-SecurityGroups22-GetResultsFromNetskope
       Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - port 22 wide open rule"
-      ScheduleExpression: "rate(10 minutes)"
+      ScheduleExpression: !Ref EventScheduleTime
       State: "ENABLED"
-      Targets: 
-        - 
-          Arn: 
-            Fn::GetAtt: 
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
               - "GetNetskopeCSPMResultsLF"
               - "Arn"
           Id: "GetNetskopeCSPMResultsLF"
           Input: '{"rule_name":"Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22","rule_short_name":"CIS-1-2-0-4-1"}'
-  
+
   PermissionToInvokeGetNetskopeCSPMResultsLFSecurityGroupPort22:
     Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: 
+    Properties:
+      FunctionName:
         Ref: "GetNetskopeCSPMResultsLF"
       Action: "lambda:InvokeFunction"
       Principal: events.amazonaws.com
       SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-4-1-SecurityGroups22-GetResultsFromNetskope'
 
-  EventRuleScheduledSecurityGroupPort3389: 
+  EventRuleScheduledSecurityGroupPort3389:
     Condition: CIS12042SecurityGroupsPort3389Enabled
     Type: AWS::Events::Rule
     DependsOn: GetNetskopeCSPMResultsLF
-    Properties: 
+    Properties:
       Name: CIS-1-2-0-4-2-SecurityGroups3389-GetResultsFromNetskope
       Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - port 3389 wide open rule"
-      ScheduleExpression: "rate(10 minutes)"
+      ScheduleExpression: !Ref EventScheduleTime
       State: "ENABLED"
-      Targets: 
-        - 
-          Arn: 
-            Fn::GetAtt: 
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
               - "GetNetskopeCSPMResultsLF"
               - "Arn"
           Id: "GetNetskopeCSPMResultsLF"
           Input: '{"rule_name":"Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389","rule_short_name":"CIS-1-2-0-4-1"}'
-  
+
   PermissionToInvokeGetNetskopeCSPMResultsLFSecurityGroupPort3389:
     Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: 
+    Properties:
+      FunctionName:
         Ref: "GetNetskopeCSPMResultsLF"
       Action: "lambda:InvokeFunction"
       Principal: events.amazonaws.com
       SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-4-2-SecurityGroups3389-GetResultsFromNetskope'
-     
+
   CIS12029VPCFlowLogsLambdaRole:
       Type: 'AWS::IAM::Role'
       Condition: CIS12029VPCFlowLogsEnabled
-      Properties: 
+      Properties:
         RoleName: !Sub "CIS-1-2-0-2-9-VPCFlowLogsLambdaRole_${AWS::Region}"
-        Tags: 
+        Tags:
           - Key: Type
             Value: CIS-1-2-0-2-9-VPCFlowLogsLambdaRole
         AssumeRolePolicyDocument:
@@ -256,6 +360,7 @@ Resources:
                       - "logs:CreateLogGroup"
                       - "logs:CreateLogStream"
                       - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
                     Resource:
                       - "*"
                   - Effect: Allow
@@ -266,8 +371,8 @@ Resources:
                         - '/'
                         - - !GetAtt AssesmentResultsS3Bucket.Arn
                           - '*'
-                        
-            
+
+
   CIS12029VPCFlowLogsLambda:
       Condition: CIS12029VPCFlowLogsEnabled
       Type: 'AWS::Lambda::Function'
@@ -288,20 +393,20 @@ Resources:
         Runtime: python3.8
         MemorySize: 128
         Timeout: 300
-        Tags: 
+        Tags:
           - Key: Type
             Value: CIS12029VPCFlowLogsLambda
 
-  PermissionToInvokeCIS12029VPCFlowLogsLambda: 
+  PermissionToInvokeCIS12029VPCFlowLogsLambda:
     Condition: CIS12029VPCFlowLogsEnabled
     Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: 
+    Properties:
+      FunctionName:
         Ref: "CIS12029VPCFlowLogsLambda"
       Action: "lambda:InvokeFunction"
       Principal: s3.amazonaws.com
       SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
-  
+
   PutS3BucketEventLambdaIAMRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -344,13 +449,16 @@ Resources:
             import json
             import boto3
             import cfnresponse
-            
+            import os
+            import time 
+            import traceback 
+
             SUCCESS = "SUCCESS"
             FAILED = "FAILED"
-            
+
             print('Loading function')
             s3 = boto3.resource('s3')
-            
+
             def lambda_handler(event, context):
                 print("Received event: " + json.dumps(event, indent=2))
                 responseData={}
@@ -376,31 +484,71 @@ Resources:
                 cfnresponse.send(event, context, responseStatus, responseData)
 
             def add_notification(LambdaArn, Bucket, prefix):
+                session = boto3.session.Session()
+                s3_client = session.client('s3')
                 bucket_notification = s3.BucketNotification(Bucket)
-                response = bucket_notification.put(
-                  NotificationConfiguration={
-                    'LambdaFunctionConfigurations': [
-                      {
-                          'LambdaFunctionArn': LambdaArn,
-                          'Events': [
-                              's3:ObjectCreated:*'
-                          ],
-                          'Filter': {
-                              'Key': {
-                                  'FilterRules': [
-                                      {
-                                          'Name': 'prefix',
-                                          'Value': prefix
-                                      },
-                                  ]
-                              }
-                          }
-                      }
-                    ]
-                  }
-                )
-                print("Put request completed....")
-              
+                
+                usecasenames = os.getenv('USECASENAME', '')
+                prefixvalues = os.getenv('PREFIXValue', '')
+                usecasename_arr = usecasenames.split(',')
+                prefixvalue_arr = prefixvalues.split(',')
+                
+                prerequired_number_of_configurations = dict()
+                count = 0
+                for index,item in enumerate(usecasename_arr):
+                    usecase_val = os.getenv(usecasename_arr[index],'no')
+                    if usecase_val == 'yes':
+                        if prefixvalue_arr[index] not in prerequired_number_of_configurations:
+                            prerequired_number_of_configurations[prefixvalue_arr[index]] = count
+                            count = count + 1
+
+                try:
+                    bucket_notification_configuration = 0
+                    bucket_result = {}
+                    configurations = []
+
+                    # retries for 20 minutes max
+                    for retry in range(1200):
+                        # Fetch the number of bucket_notification configurations
+                        bucket_result = s3_client.get_bucket_notification_configuration(Bucket=Bucket,)
+                        if "LambdaFunctionConfigurations" in bucket_result.keys():
+                            configurations = bucket_result['LambdaFunctionConfigurations']
+                            bucket_notification_configuration = len(configurations)
+
+                        # Are all the previous configurations completed?
+                        if bucket_notification_configuration == prerequired_number_of_configurations[prefix]:
+                            break
+                        else:
+                            time.sleep(1)
+                    else:
+                        print("Max retries exceeded while waiting for prerequired number of configurations. Current value={}".format(bucket_notification_configuration))
+
+                    new_configuration = {
+                        'LambdaFunctionArn': LambdaArn,
+                        'Events': [
+                            's3:ObjectCreated:*'
+                        ],
+                        'Filter': {
+                            'Key': {
+                                'FilterRules': [
+                                    {
+                                        'Name': 'prefix',
+                                        'Value': prefix
+                                    },
+                                ]
+                            }
+                        }
+                    }
+                    configurations.append(new_configuration)
+                    response = s3_client.put_bucket_notification_configuration(
+                        Bucket = Bucket,
+                        NotificationConfiguration = {'LambdaFunctionConfigurations' : configurations}
+                    )
+                    
+                except Exception as e:
+                  print('Failed to create bucket notification configurations:', e)
+                  print(traceback.format_exc())
+
             def delete_notification(Bucket):
                 bucket_notification = s3.BucketNotification(Bucket)
                 response = bucket_notification.put(
@@ -408,12 +556,26 @@ Resources:
                 )
                 print("Delete request completed....")
       Runtime: python3.6
+      Environment:
+        Variables:
+          CIS12029VPCFlowLogs: !Ref CIS12029VPCFlowLogs
+          CIS12041SecurityGroupsPort22: !Ref CIS12041SecurityGroupsPort22
+          CIS12042SecurityGroupsPort3389: !Ref CIS12042SecurityGroupsPort3389
+          BPR38RDSSnapshotsPublic: !Ref BPR38RDSSnapshotsPublic
+          BPR19RedShiftClusterPublic: !Ref BPR19RedShiftClusterPublic
+          CIS12022CloudTrailLogFile: !Ref CIS12022CloudTrailLogFile
+          BPR06DefaultNACL: !Ref BPR06DefaultNACL
+          BPR010NACLAssociatedWithSubnet: !Ref BPR010NACLAssociatedWithSubnet
+          BPR100S3BucketPublicAccess: !Ref BPR100S3BucketPublicAccess
+          CIS12014AccessKeyRotation: !Ref CIS12014AccessKeyRotation
+          USECASENAME: "CIS12029VPCFlowLogs,CIS12041SecurityGroupsPort22,CIS12042SecurityGroupsPort3389,BPR38RDSSnapshotsPublic,BPR19RedShiftClusterPublic,CIS12022CloudTrailLogFile,BPR06DefaultNACL,BPR010NACLAssociatedWithSubnet,BPR100S3BucketPublicAccess,CIS12014AccessKeyRotation"
+          PREFIXValue: "CIS-1-2-0-2-9/,CIS-1-2-0-4-1/,CIS-1-2-0-4-1/,BPR-3-8/,BPR-1-9/,CIS-1-2-0-2-2/,BPR-0-6/,BPR-0-6/,BPR-1-0-0/,CIS-1-2-0-1-4/"
       Timeout: 50
 
   CIS12029VPCFlowLogsPutS3BucketEventLambdaFunctionTrigger:
     Type: 'Custom::LambdaTrigger'
     Condition: CIS12029VPCFlowLogsEnabled
-    DependsOn: PermissionToInvokeCIS12029VPCFlowLogsLambda
+    DependsOn: ["PermissionToInvokeCIS12029VPCFlowLogsLambda", "AssesmentResultsS3Bucket"]
     Properties:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
       LambdaArn: !GetAtt CIS12029VPCFlowLogsLambda.Arn
@@ -423,9 +585,9 @@ Resources:
   CIS12041SecurityGroupsLambdaRole:
       Condition: CIS12041SecurityGroupsEnabled
       Type: 'AWS::IAM::Role'
-      Properties: 
+      Properties:
         RoleName: !Sub "CIS-1-2-0-4-1-SecurityGroupsLambdaRole_${AWS::Region}"
-        Tags: 
+        Tags:
           - Key: Type
             Value: CIS-1-2-0-4-1-SecurityGroupsLambdaRole
         AssumeRolePolicyDocument:
@@ -446,6 +608,7 @@ Resources:
                       - "logs:CreateLogGroup"
                       - "logs:CreateLogStream"
                       - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
                     Resource:
                       - "*"
                   - Effect: Allow
@@ -456,7 +619,7 @@ Resources:
                         - '/'
                         - - !GetAtt AssesmentResultsS3Bucket.Arn
                           - '*'
-            
+
   CIS12041SecurityGroupsLambda:
       Condition: CIS12041SecurityGroupsEnabled
       Type: 'AWS::Lambda::Function'
@@ -477,15 +640,15 @@ Resources:
         Runtime: python3.8
         MemorySize: 128
         Timeout: 300
-        Tags: 
+        Tags:
           - Key: Type
             Value: CIS12041SecurityGroupsLambda
 
-  PermissionToInvokeCIS12041SecurityGroupsLambda: 
+  PermissionToInvokeCIS12041SecurityGroupsLambda:
     Condition: CIS12041SecurityGroupsEnabled
     Type: AWS::Lambda::Permission
-    Properties: 
-      FunctionName: 
+    Properties:
+      FunctionName:
         Ref: "CIS12041SecurityGroupsLambda"
       Action: "lambda:InvokeFunction"
       Principal: s3.amazonaws.com
@@ -494,12 +657,703 @@ Resources:
   CIS12041SecurityGroupsPutS3BucketEventLambdaFunctionTrigger:
     Condition: CIS12041SecurityGroupsEnabled
     Type: 'Custom::LambdaTrigger'
-    DependsOn: PermissionToInvokeCIS12041SecurityGroupsLambda
+    DependsOn: ["PermissionToInvokeCIS12041SecurityGroupsLambda", "AssesmentResultsS3Bucket"]
     Properties:
       ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
       LambdaArn: !GetAtt CIS12041SecurityGroupsLambda.Arn
       Bucket: !Ref AssesmentResultsS3Bucket
       prefix: "CIS-1-2-0-4-1/"
+
+  EventRuleScheduledRDSSnapshotsPublic:
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    Properties:
+      Name: BPR-3-8-RDSSnapshotsPublic-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - RDS Snapshots public rule"
+      ScheduleExpression: !Ref EventScheduleTime
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Access permissions and authorizations: Ensure RDS Instances do not have Publicly Accessible Snapshots","rule_short_name":"BPR-3-8"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFRDSSnapshotsPublic:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/BPR-3-8-RDSSnapshotsPublic-GetResultsFromNetskope'
+
+  BPR38RDSSnapshotsPublicLambdaRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR38RDSSnapshotsPublicEnabled
+      Properties:
+        RoleName: !Sub "BPR-3-8-RDSSnapshotsPublicLambdaRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: BPR-3-8-RDSSnapshotsPublicLambdaRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-3-8-RDSSnapshotsPublicLambdaPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "logs:CreateLogGroup"
+                      - "logs:CreateLogStream"
+                      - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
+                    Resource:
+                      - "*"
+                  - Effect: Allow
+                    Action:
+                      - 's3:GetObject'
+                    Resource:
+                       - !Join
+                        - '/'
+                        - - !GetAtt AssesmentResultsS3Bucket.Arn
+                          - '*'
+
+  BPR38RDSSnapshotsPublicLambda:
+      Condition: BPR38RDSSnapshotsPublicEnabled
+      Type: 'AWS::Lambda::Function'
+      DependsOn: BPR38RDSSnapshotsPublicLambdaRole
+      Properties:
+        Description: >-
+          This lambda function called for the Netskope findings for BPR-3-8 and set DB snapshot visibility as private.
+        Handler: 'lambda_function.lambda_handler'
+        Role: !GetAtt BPR38RDSSnapshotsPublicLambdaRole.Arn
+        Code:
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-3-8-PublicRDSSnapshotRemediationLambda.zip']]
+        Layers:
+          - !Ref NetskopeCSPMLambdaLayer
+        Environment:
+          Variables:
+            AWS_PARTITION: aws
+            LOGLEVEL: 'INFO'
+            AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 300
+        Tags:
+          - Key: Type
+            Value: BPR38RDSSnapshotsPublicLambda
+
+  PermissionToInvokeBPR38RDSSnapshotsPublicLambda:
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "BPR38RDSSnapshotsPublicLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  BPR38RDSSnapshotsPublicPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    DependsOn: ["PermissionToInvokeBPR38RDSSnapshotsPublicLambda", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt BPR38RDSSnapshotsPublicLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "BPR-3-8/"
+
+  EventRuleScheduledRedShiftClusterPublic:
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Condition: BPR19RedShiftClusterPublicEnabled
+    Properties:
+      Name: BPR-1-9-RedShiftClusterPublic-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - RedShift cluster public rule"
+      ScheduleExpression: !Ref EventScheduleTime
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Access permissions and authorizations: Ensure Redshift Clusters are not Publicly accessible","rule_short_name":"BPR-1-9"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFRedShiftClusterPublic:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/BPR-1-9-RedShiftClusterPublic-GetResultsFromNetskope'
+
+  BPR19RedShiftClusterPublicLambdaRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR19RedShiftClusterPublicEnabled
+      Properties:
+        RoleName: !Sub "BPR-1-9-RedShiftClusterPublicLambdaRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: BPR-1-9-RedShiftClusterPublicLambdaRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-1-9-RedShiftClusterPublicLambdaPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "logs:CreateLogGroup"
+                      - "logs:CreateLogStream"
+                      - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
+                    Resource:
+                      - "*"
+                  - Effect: Allow
+                    Action:
+                      - 's3:GetObject'
+                    Resource:
+                       - !Join
+                        - '/'
+                        - - !GetAtt AssesmentResultsS3Bucket.Arn
+                          - '*'
+
+  BPR19RedShiftClusterPublicLambda:
+      Condition: BPR19RedShiftClusterPublicEnabled
+      Type: 'AWS::Lambda::Function'
+      DependsOn: BPR19RedShiftClusterPublicLambdaRole
+      Properties:
+        Description: >-
+          This lambda function called for the Netskope findings for BPR-1-9 and set RedShift Cluster accessibility as private.
+        Handler: 'lambda_function.lambda_handler'
+        Role: !GetAtt BPR19RedShiftClusterPublicLambdaRole.Arn
+        Code:
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-1-9-PublicRedShiftClusterRemediationLambda.zip']]
+        Layers:
+          - !Ref NetskopeCSPMLambdaLayer
+        Environment:
+          Variables:
+            AWS_PARTITION: aws
+            LOGLEVEL: 'INFO'
+            AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 300
+        Tags:
+          - Key: Type
+            Value: BPR19RRedShiftClusterPublicLambda
+
+  PermissionToInvokeBPR19RedShiftClusterPublicLambda:
+    Condition: BPR19RedShiftClusterPublicEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "BPR19RedShiftClusterPublicLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  BPR19RedShiftClusterPublicPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: BPR19RedShiftClusterPublicEnabled
+    DependsOn: ["PermissionToInvokeBPR19RedShiftClusterPublicLambda", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt BPR19RedShiftClusterPublicLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "BPR-1-9/"
+
+  EventRuleScheduledCloudTrailLogFileValidation:
+    Condition: CIS12022CloudTrailLogFileEnabled
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Properties:
+      Name: CIS-1-2-0-2-2-CloudTrailLogFileValidation-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - CloudTrail Log File Validation"
+      ScheduleExpression: !Ref EventScheduleTime
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Secure audit trails so they cannot be altered : CloudTrail Log Files Lack Integrity Validation","rule_short_name":"CIS-1-2-0-2-2"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFCloudTrailLogFileValidation:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-2-2-CloudTrailLogFileValidation-GetResultsFromNetskope'
+
+  CIS12022CloudTrailLogFileValidationLambdaRole:
+      Type: 'AWS::IAM::Role'
+      Condition: CIS12022CloudTrailLogFileEnabled
+      Properties:
+        RoleName: !Sub "CIS-1-2-0-2-2-CloudTrailLogFileLambdaRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: CIS-1-2-0-2-2-CloudTrailLogFileLambdaRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "CIS-1-2-0-2-2-CloudTrailLogFileValidationLambdaPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "logs:CreateLogGroup"
+                      - "logs:CreateLogStream"
+                      - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
+                    Resource:
+                      - "*"
+                  - Effect: Allow
+                    Action:
+                      - 's3:GetObject'
+                    Resource:
+                       - !Join
+                        - '/'
+                        - - !GetAtt AssesmentResultsS3Bucket.Arn
+                          - '*'
+
+  CIS12022CloudTrailLogFileValidationLambda:
+      Condition: CIS12022CloudTrailLogFileEnabled
+      Type: 'AWS::Lambda::Function'
+      DependsOn: CIS12022CloudTrailLogFileValidationLambdaRole
+      Properties:
+        Description: >-
+          This lambda function called for the Netskope findings for CIS-1-2-0-2-2 and enable ClouTrail Log File Validation.
+        Handler: 'lambda_function.lambda_handler'
+        Role: !GetAtt CIS12022CloudTrailLogFileValidationLambdaRole.Arn
+        Code:
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-2-2-CloudTrailLogFileRemediationLambda.zip']]
+        Layers:
+          - !Ref NetskopeCSPMLambdaLayer
+        Environment:
+          Variables:
+            AWS_PARTITION: aws
+            LOGLEVEL: 'INFO'
+            AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 300
+        Tags:
+          - Key: Type
+            Value: CIS12022CloudTrailLogFileValidationLambda
+
+  PermissionToInvokeCIS12022CloudTrailLogFileValidationLambda:
+    Condition: CIS12022CloudTrailLogFileEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "CIS12022CloudTrailLogFileValidationLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  CIS12022CloudTrailLogFileValidationPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: CIS12022CloudTrailLogFileEnabled
+    DependsOn: ["PermissionToInvokeCIS12022CloudTrailLogFileValidationLambda", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt CIS12022CloudTrailLogFileValidationLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "CIS-1-2-0-2-2/"
+
+  EventRuleScheduledDefaultNACL:
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Condition: BPR06DefaultNACLEnabled
+    Properties:
+      Name: BPR-0-6-DefaultNACL-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - Default Network ACL all traffic ingress"
+      ScheduleExpression: !Ref EventScheduleTime
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Communications and control network protection: Ensure no rule exists which allows all ingress traffic in default Network ACL","rule_short_name":"BPR-0-6"}'
+
+  EventRuleScheduledNACLAssociatedWithSubnet:
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Condition: BPR010NACLAssociatedWithSubnetEnabled
+    Properties:
+      Name: BPR-0-1-0-NACLAssociatedWithSubnet-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - Network ACL associated with subnet all traffic ingress"
+      ScheduleExpression: !Ref EventScheduleTime
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Communications and control network protection: Ensure no rule exists which allows all ingress traffic in Network ACL which is associated with a subnet","rule_short_name":"BPR-0-6"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFDefaultNACL:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/BPR-0-6-DefaultNACL-GetResultsFromNetskope'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFNACLAssociatedWithSubnet:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/BPR-0-1-0-NACLAssociatedWithSubnet-GetResultsFromNetskope'
+
+  BPR06NACLLambdaRole:
+      Type: 'AWS::IAM::Role'
+      Condition: BPR06NACLEnabled
+      Properties:
+        RoleName: !Sub "BPR-0-6-NACLLambdaRole_${AWS::Region}"
+        Tags:
+          - Key: Type
+            Value: BPR-0-6-NACLLambdaRole
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action:
+                - sts:AssumeRole
+        Path: '/'
+        Policies:
+            - PolicyName: !Sub "BPR-0-6-NACLLambdaPolicy_${AWS::Region}"
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - "logs:CreateLogGroup"
+                      - "logs:CreateLogStream"
+                      - "logs:PutLogEvents"
+                      - "sts:AssumeRole"
+                    Resource:
+                      - "*"
+                  - Effect: Allow
+                    Action:
+                      - 's3:GetObject'
+                    Resource:
+                       - !Join
+                        - '/'
+                        - - !GetAtt AssesmentResultsS3Bucket.Arn
+                          - '*'
+
+  BPR06NACLLambda:
+      Condition: BPR06NACLEnabled
+      Type: 'AWS::Lambda::Function'
+      DependsOn: BPR06NACLLambdaRole
+      Properties:
+        Description: >-
+          This lambda function called for the Netskope findings for BPR-0-6 and remove entry from Network ACL which allows all traffic ingress.
+        Handler: 'lambda_function.lambda_handler'
+        Role: !GetAtt BPR06NACLLambdaRole.Arn
+        Code:
+          S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-0-6-NACLRemediationLambda.zip']]
+        Layers:
+          - !Ref NetskopeCSPMLambdaLayer
+        Environment:
+          Variables:
+            AWS_PARTITION: aws
+            LOGLEVEL: 'INFO'
+            AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 300
+        Tags:
+          - Key: Type
+            Value: BPR06NACLLambda
+
+  PermissionToInvokeBPR06NACLLambda:
+    Condition: BPR06NACLEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "BPR06NACLLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  BPR06NACLPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: BPR06NACLEnabled
+    DependsOn: ["PermissionToInvokeBPR06NACLLambda", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt BPR06NACLLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "BPR-0-6/"
+
+  EventRuleScheduledS3BucketPublicAccess:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Type: AWS::Events::Rule
+    DependsOn: GetNetskopeCSPMResultsLF
+    Properties:
+      Name: BPR-1-0-0-S3BucketPublicAccess-GetResultsFromNetskope
+      Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - Enable block public access settings for the bucket"
+      ScheduleExpression: "rate(10 minutes)"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - "GetNetskopeCSPMResultsLF"
+              - "Arn"
+          Id: "GetNetskopeCSPMResultsLF"
+          Input: '{"rule_name":"Ensure S3 Bucket is not publicly accessible.","rule_short_name":"BPR-1-0-0"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFS3BucketPublicAccess:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/BPR-1-0-0-S3BucketPublicAccess-GetResultsFromNetskope'
+
+  BPR100S3BucketPublicAccessLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Properties:
+      RoleName: !Sub "BPR-1-0-0-S3BucketPublicAccessLambdaRole_${AWS::Region}"
+      Tags:
+        - Key: Type
+          Value: BPR-1-0-0-S3BucketPublicAccessLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: !Sub "BPR-1-0-0-S3BucketPublicAccessLambdaPolicy_${AWS::Region}"
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "sts:AssumeRole"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource:
+                  - !Join
+                    - '/'
+                    - - !GetAtt AssesmentResultsS3Bucket.Arn
+                      - '*'
+
+  BPR100S3BucketPublicAccessLambda:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Type: 'AWS::Lambda::Function'
+    DependsOn: BPR100S3BucketPublicAccessLambdaRole
+    Properties:
+      Description: >-
+        This lambda function called for the Netskope findings for BPR-1-0-0 and enable block public access settings.
+      Handler: 'lambda_function.lambda_handler'
+      Role: !GetAtt BPR100S3BucketPublicAccessLambdaRole.Arn
+      Code:
+        S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], 'BPR-1-0-0-S3BucketPublicAccessRemediationLambda.zip' ] ]
+      Layers:
+        - !Ref NetskopeCSPMLambdaLayer
+      Environment:
+        Variables:
+          AWS_PARTITION: aws
+          LOGLEVEL: 'INFO'
+          AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 300
+      Tags:
+        - Key: Type
+          Value: BPR100S3BucketPublicAccessLambda
+
+  PermissionToInvokeBPR100S3BucketPublicAccess:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "BPR100S3BucketPublicAccessLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  BPR100S3BucketPublicAccessPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: BPR100S3BucketPublicAccessEnabled
+    DependsOn: ["PermissionToInvokeBPR100S3BucketPublicAccess", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt BPR100S3BucketPublicAccessLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "BPR-1-0-0/"
+
+  EventRuleScheduledAccessKeyRotation:
+      Condition: CIS12014AccessKeyRotationEnabled
+      Type: AWS::Events::Rule
+      DependsOn: GetNetskopeCSPMResultsLF
+      Properties:
+        Name: CIS-1-2-0-1-4-AccessKeyRotation-GetResultsFromNetskope
+        Description: "Scheduled event Rule for GetNetskopeCSPMResultsLF Lambda function - Inactive access keys that are created before 90 days"
+        ScheduleExpression: "rate(10 minutes)"
+        State: "ENABLED"
+        Targets:
+          - Arn:
+              Fn::GetAtt:
+                - "GetNetskopeCSPMResultsLF"
+                - "Arn"
+            Id: "GetNetskopeCSPMResultsLF"
+            Input: '{"rule_name":"Remote access: Ensure access keys are rotated every 90 days or less.","rule_short_name":"CIS-1-2-0-1-4"}'
+
+  PermissionToInvokeGetNetskopeCSPMResultsLFAccessKeyRotation:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "GetNetskopeCSPMResultsLF"
+      Action: "lambda:InvokeFunction"
+      Principal: events.amazonaws.com
+      SourceArn: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/CIS-1-2-0-1-4-AccessKeyRotation-GetResultsFromNetskope'
+
+  CIS12014AccessKeyRotationLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Condition: CIS12014AccessKeyRotationEnabled
+    Properties:
+      RoleName: !Sub "CIS-1-2-0-1-4-AccessKeyRotationLambdaRole_${AWS::Region}"
+      Tags:
+        - Key: Type
+          Value: CIS-1-2-0-1-4-AccessKeyRotationLambdaRole
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: !Sub "CIS-1-2-0-1-4-AccessKeyRotationLambdaPolicy_${AWS::Region}"
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "sts:AssumeRole"
+                Resource:
+                  - "*"
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource:
+                  - !Join
+                    - '/'
+                    - - !GetAtt AssesmentResultsS3Bucket.Arn
+                      - '*'
+
+  CIS12014AccessKeyRotationLambda:
+    Condition: CIS12014AccessKeyRotationEnabled
+    Type: 'AWS::Lambda::Function'
+    DependsOn: CIS12014AccessKeyRotationLambdaRole
+    Properties:
+      Description: >-
+        This lambda function called for the Netskope findings for CIS-1-2-0-1-4 and inactive access keys that are created before 90 days
+      Handler: 'lambda_function.lambda_handler'
+      Role: !GetAtt CIS12014AccessKeyRotationLambdaRole.Arn
+      Code:
+        S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
+        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], 'CIS-1-2-0-1-4-AccessKeyRotationRemediationLambda.zip' ] ]
+      Layers:
+        - !Ref NetskopeCSPMLambdaLayer
+      Environment:
+        Variables:
+          AWS_PARTITION: aws
+          LOGLEVEL: 'INFO'
+          AssesmentResultsS3Bucket: !Ref AssesmentResultsS3Bucket
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 300
+      Tags:
+        - Key: Type
+          Value: CIS12014AccessKeyRotationLambda
+
+  PermissionToInvokeCIS12014AccessKeyRotation:
+    Condition: CIS12014AccessKeyRotationEnabled
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "CIS12014AccessKeyRotationLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt AssesmentResultsS3Bucket.Arn
+
+  CIS12014AccessKeyRotationPutS3BucketEventLambdaFunctionTrigger:
+    Type: 'Custom::LambdaTrigger'
+    Condition: CIS12014AccessKeyRotationEnabled
+    DependsOn: ["PermissionToInvokeCIS12014AccessKeyRotation", "AssesmentResultsS3Bucket"]
+    Properties:
+      ServiceToken: !GetAtt PutS3BucketEventLambdaFunction.Arn
+      LambdaArn: !GetAtt CIS12014AccessKeyRotationLambda.Arn
+      Bucket: !Ref AssesmentResultsS3Bucket
+      prefix: "CIS-1-2-0-1-4/"
 
 Outputs:
   AssesmentResultsS3Bucket:
@@ -521,4 +1375,51 @@ Outputs:
     Condition: CIS12041SecurityGroupsEnabled
     Description: Lambda to disable wode open port 22 or 3389 in Security Groups
     Value: !GetAtt CIS12041SecurityGroupsLambda.Arn
-  
+  BPR38RDSSnapshotsPublicLambdaRole:
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    Description: RDS snapshots public remediation Lambda Execution Role
+    Value: !GetAtt BPR38RDSSnapshotsPublicLambdaRole.Arn
+  BPR38RDSSnapshotsPublicLambda:
+    Condition: BPR38RDSSnapshotsPublicEnabled
+    Description: Lambda to set DB snapshot visibility as private
+    Value: !GetAtt BPR38RDSSnapshotsPublicLambda.Arn
+  BPR19RedShiftClusterPublicLambdaRole:
+    Condition: BPR19RedShiftClusterPublicEnabled
+    Description: RedShift Cluster public remediation Lambda Execution Role
+    Value: !GetAtt BPR19RedShiftClusterPublicLambdaRole.Arn
+  BPR19RedShiftClusterPublicLambda:
+    Condition: BPR19RedShiftClusterPublicEnabled
+    Description: Lambda to set RedShift Cluster accessibility as private
+    Value: !GetAtt BPR19RedShiftClusterPublicLambda.Arn
+  CIS12022CloudTrailLogFileValidationLambdaRole:
+    Condition: CIS12022CloudTrailLogFileEnabled
+    Description: CloudTrail Log File validation remediation Lambda Execution Role
+    Value: !GetAtt CIS12022CloudTrailLogFileValidationLambdaRole.Arn
+  CIS12022CloudTrailLogFileValidationLambda:
+    Condition: CIS12022CloudTrailLogFileEnabled
+    Description: Lambda to enable CloudTrail Log File validation
+    Value: !GetAtt CIS12022CloudTrailLogFileValidationLambda.Arn
+  BPR06NACLLambdaRole:
+    Condition: BPR06NACLEnabled
+    Description: Network ACL remediation Lambda Execution Role
+    Value: !GetAtt BPR06NACLLambdaRole.Arn
+  BPR06NACLLambda:
+    Condition: BPR06NACLEnabled
+    Description: Lambda to remove entry from Network ACL which allows all traffic ingress
+    Value: !GetAtt BPR06NACLLambda.Arn
+  BPR100S3BucketPublicAccessLambdaRole:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Description: S3 bucket public access remediation Lambda Execution Role
+    Value: !GetAtt BPR100S3BucketPublicAccessLambdaRole.Arn
+  BPR100S3BucketPublicAccessLambda:
+    Condition: BPR100S3BucketPublicAccessEnabled
+    Description: Lambda to enable block public access settings of the bucket
+    Value: !GetAtt BPR100S3BucketPublicAccessLambda.Arn
+  CIS12014AccessKeyRotationLambdaRole:
+    Condition: CIS12014AccessKeyRotationEnabled
+    Description: access key inactivation remediation Lambda Execution Role
+    Value: !GetAtt BPR06NACLLambdaRole.Arn
+  CIS12014AccessKeyRotationLambda:
+    Condition: CIS12014AccessKeyRotationEnabled
+    Description: Lambda to inactive access keys that are created before 90 days
+    Value: !GetAtt BPR06NACLLambda.Arn
