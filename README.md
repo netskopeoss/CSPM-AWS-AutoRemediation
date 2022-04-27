@@ -54,8 +54,6 @@ To deploy it on the individual target account:
     
 #  Supported AWS Auto-remediation Rules
 
-
-
 ## Service: CloudTrail
 ### 1. Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
 
@@ -76,10 +74,6 @@ To deploy it on the individual target account:
   - cloudtrail:GetTrail
   - ssm:StartAutomationExecution
   - ssm:GetAutomationExecution
-
-
-
-
 
 
 ## Service: EC2
@@ -169,8 +163,7 @@ To deploy it on the individual target account:
 - **Permissions Required**
   - ec2:DescribeNetworkAcls
   - ec2:DeleteNetworkAclEntry
-
-##
+  
 ### 6. Communications and control network protection: Ensure no rule exists which allows all ingress traffic in Network ACL which is associated with a subnet
 
 - **Rule Definition**
@@ -206,8 +199,8 @@ To deploy it on the individual target account:
 - **Permissions Required**
   - iam:UpdateAccessKey
   - iam:ListAccessKeys
-#
-#
+
+
 ## Service: RDS
 ### 8. Access permissions and authorizations: Ensure RDS Instances do not have Publicly Accessible Snapshots
 
@@ -237,7 +230,6 @@ To deploy it on the individual target account:
 - **Auto-Remediation Overview**
   - With a publicly accessible Amazon Redshift cluster, the selected Redshift cluster is publicly accessible from the Internet and widely exposed to security threats.
   - The auto-remediation lambda function invokes the SSM runbook: [AWSConfigRemediation-DisablePublicAccessToRedshiftCluster](https://docs.aws.amazon.com/systems-manager-automation-runbooks/latest/userguide/automation-aws-disable-redshift-public-access.html) which disables public accessibility for Amazon Redshift cluster.
-
 
 - **Information from alert**
   - AWS Account ID
