@@ -51,3 +51,238 @@ To deploy it on the individual target account:
     e.  Click Next.
     f.  Optionally, enter the Tags for your CloudFormation stack and click Next.
     g.  Acknowledge creating IAM resources and click Create stack.
+    
+    Supported AWS Auto-remediation Rules
+
+
+
+# Service: CloudTrail
+1. ## Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
+
+- **Rule Definition**
+  - CloudTrail should have Log File Validation Enabled
+
+- **Auto-Remediation Overview**
+  - The CloudTrail log file integrity validation process lets you know if a log file has been deleted or changed, or assert positively that no log files were delivered to your account during a given period of time.
+  - The auto-remediation lambda function invokes the SSM runbook: [AWSConfigRemediation-EnableCloudTrailLogFileValidation](https://docs.aws.amazon.com/systems-manager-automation-runbooks/latest/userguide/automation-aws-enable-ctrail-log-validation.html) which enables log file validation for AWS CloudTrail.
+
+- **Information from alert**
+  - AWS Account ID
+  - CloudTrail ARN
+  - Region Name
+
+- **Permissions Required**
+  - cloudtrail:UpdateTrail
+  - cloudtrail:GetTrail
+  - ssm:StartAutomationExecution
+  - ssm:GetAutomationExecution
+
+
+
+
+
+#
+# Service: EC2
+1. ## Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22
+
+- **Rule Definition**
+  - SecurityGroup should not have InboundRules with [ IPRanges with [ IP eq 0.0.0.0/0 ] and ( FromPort lte 22 and ToPort gte 22 ) and Protocol in ("-1", "tcp") ]
+
+- **Auto-Remediation Overview**
+  - The auto-remediation lambda function invokes the SSM runbook: [AWS-DisablePublicAccessForSecurityGroup](https://docs.aws.amazon.com/systems-manager-automation-runbooks/latest/userguide/automation-aws-disablepublicaccessforsecuritygroup.html) which removes the inbound rule entry of Source  ‘0.0.0.0/0’ with port 22 and port 3389 from security groups
+  - The same lambda function will be used for the security group inbound rule entry with source ‘0.0.0.0/0’ with port 22 and port 3389
+
+- **Information from alert**
+  - AWS Account ID
+  - Security group Name
+  - Region Name
+
+- **Permissions Required**
+  - ec2:DescribeSecurityGroupReferences
+  - ec2:DescribeSecurityGroups
+  - ec2:UpdateSecurityGroupRuleDescriptionsEgress
+  - ec2:UpdateSecurityGroupRuleDescriptionsIngress
+  - ec2:RevokeSecurityGroupIngress
+  - ec2:RevokeSecurityGroupEgress
+  - ssm:StartAutomationExecution
+  - iam:PassRole
+
+1. ## Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389
+
+- **Rule Definition**
+  - SecurityGroup should not have InboundRules with [ IPRanges with [ IP eq 0.0.0.0/0 ] and ( FromPort lte 3389 and ToPort gte 3389 ) and Protocol in ("-1", "udp", "tcp") ]
+
+
+
+- **Auto-Remediation Overview**
+  - The auto-remediation lambda function invokes the SSM runbook: [AWS-DisablePublicAccessForSecurityGroup](https://docs.aws.amazon.com/systems-manager-automation-runbooks/latest/userguide/automation-aws-disablepublicaccessforsecuritygroup.html) which removes the inbound rule entry of Source  ‘0.0.0.0/0’ with port 22 and port 3389 from security groups
+  - The same lambda function will be used for the security group inbound rule entry with source ‘0.0.0.0/0’ with port 22 and port 3389
+
+- **Information from alert**
+  - AWS Account ID
+  - Security group Name
+  - Region Name
+
+- **Permissions Required**
+  - ec2:DescribeSecurityGroupReferences
+  - ec2:DescribeSecurityGroups
+  - ec2:UpdateSecurityGroupRuleDescriptionsEgress
+  - ec2:UpdateSecurityGroupRuleDescriptionsIngress
+  - ec2:RevokeSecurityGroupIngress
+  - ec2:RevokeSecurityGroupEgress
+  - ssm:StartAutomationExecution
+
+1. ## Baseline network operations and data flows: Ensure VPC flow logging is enabled in all VPCs
+
+- **Rule Definition**
+  - VPC should have atleast one FlowLogs with [ id ]
+
+- **Auto-Remediation Overview**
+  - A flow log enables you to capture information about the IP traffic going to and from network interfaces in your VPC.
+  - The auto-remediation lambda function creates the VPC flow logging with the cloud watch log group if it does not exist.
+
+- **Information from alert**
+  - AWS Account ID
+  - VPC ID
+  - Region Name
+
+- **Permissions Required**
+  - logs:CreateLogGroup
+  - ec2:CreateFlowLogs
+  - ec2:DescribeFlowLogs
+  - iam:PassRole
+
+1. ## Communications and control network protection: Ensure no rule exists which allows all ingress traffic in default Network ACL
+
+- **Rule Definition**
+  - NetworkACL should not have IsDefault eq true and Rules with [ RuleAction eq "allow" and Protocol eq "-1" and Egress eq False and CidrBlock eq 0.0.0.0/0 ]
+
+- **Auto-Remediation Overview**
+  - The auto-remediation lambda function removes the rule entry from the default network Access control list that allows all traffic ingress for all protocols.
+  - The same lambda function will be used for the default network ACLs and the network ACLs which are associated with subnets.
+
+- **Information from alert**
+  - AWS Account ID
+  - Network ACL ID
+  - Region Name
+
+- **Permissions Required**
+  - ec2:DescribeNetworkAcls
+  - ec2:DeleteNetworkAclEntry
+
+##
+1. ## Communications and control network protection: Ensure no rule exists which allows all ingress traffic in Network ACL which is associated with a subnet
+
+- **Rule Definition**
+  - NetworkACL should not have IsDefault eq true and Rules with [ RuleAction eq "allow" and Protocol eq "-1" and Egress eq False and CidrBlock eq 0.0.0.0/0 ]
+
+- **Auto-Remediation Overview**
+  - The auto-remediation lambda function removes the rule entry from the specified network Access control list that allows all traffic ingress for all protocols.
+  - The same lambda function will be used for the default network ACLs and the network ACLs which are associated with subnets.
+
+- **Information from alert**
+  - AWS Account ID
+  - Network ACL ID
+  - Region Name
+
+- **Permissions Required**
+  - ec2:DescribeNetworkAcls
+  - ec2:DeleteNetworkAclEntry
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Service: IAM
+1. ## Remote access: Ensure access keys are rotated every 90 days or less.
+
+- **Rule Definition**
+  - IAMUser should not have  AccessKey with [ Active and LastRotatedTime isEarlierThan ( -90 , "days" ) ]
+
+- **Auto-Remediation Overview**
+  - The auto-remediation lambda function inactivates the access key which is older than 90 days for the user.
+
+- **Information from alert**
+  - AWS Account ID
+  - Username
+  - Region Name
+
+- **Permissions Required**
+  - iam:UpdateAccessKey
+  - iam:ListAccessKeys
+#
+#
+# Service: RDS
+1. ## Access permissions and authorizations: Ensure RDS Instances do not have Publicly Accessible Snapshots
+
+- **Rule Definition**
+  - Ensure that** Relational Database Service (RDS) database instances should not have publicly accessible snapshots (i.e. shared with all AWS accounts and users).
+
+- **Auto-Remediation Overview**
+  - Publicly shared AWS RDS database snapshots give permission to both a) restore the snapshot and b) create database instances from it. If required, you can share your RDS snapshots with a particular AWS account without making them public.
+  - The auto-remediation lambda function disables the public access of all snapshots of given database instances by modifying the snapshot’s attribute ‘restore’.
+
+- **Information from alert**
+  - AWS Account ID
+  - Database Instance Name
+  - Region Name
+
+- **Required Permissions**
+  - rds:DescribeDBSnapshots
+  - rds:ModifyDBSnapshotAttribute
+  - rds:DescribeDBSnapshotAttributes
+  - rds:DescribeDBInstance
+# Service: Redshift
+1. ## Access permissions and authorizations: Ensure Redshift Clusters are not Publicly accessible
+
+- **Rule Definition**
+  - Amazon Redshift Clusters should not be publicly accessible.
+
+- **Auto-Remediation Overview**
+  - With a publicly accessible Amazon Redshift cluster, the selected Redshift cluster is publicly accessible from the Internet and widely exposed to security threats.
+  - The auto-remediation lambda function invokes the SSM runbook: [AWSConfigRemediation-DisablePublicAccessToRedshiftCluster](https://docs.aws.amazon.com/systems-manager-automation-runbooks/latest/userguide/automation-aws-disable-redshift-public-access.html) which disables public accessibility for Amazon Redshift cluster.
+
+
+- **Information from alert**
+  - AWS Account ID
+  - Redshift Cluster ID
+  - Region Name
+
+- **Required Permissions**
+  - redshift:DescribeClusters
+  - redshift:ModifyCluster
+  - ssm:StartAutomationExecution
+  - ssm:GetAutomationExecution
+# Service: S3
+1. ## Ensure S3 Bucket is not publicly accessible.
+
+- **Rule Definition**
+  - S3Bucket should not have Access eq "Public"
+
+- **Auto-Remediation Overview**
+  - Bucket access can be managed using IAM policies and access control lists (ACLs).
+  - Block public access (bucket settings) is used to block public access given from policies or ACLs. It contains the following settings,
+    - Block public access to buckets and objects granted through new access control lists (ACLs)
+    - Block public access to buckets and objects granted through any access control lists (ACLs)
+    - Block public access to buckets and objects granted through new public bucket or access point policies
+    - Block public and cross-account access to buckets and objects through any public bucket or access point policies
+  - The auto-remediation lambda function enables the ( ii ) and ( iv ) settings for the given bucket which disables the public access to the bucket.
+
+- **Information from alert**
+  - AWS Account ID
+  - Bucket Name
+  - Region Name
+
+- **Permissions Required**
+  - s3:GetBucketPublicAccessBlock
+  - s3:PutBucketPublicAccessBlock
