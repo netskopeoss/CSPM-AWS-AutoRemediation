@@ -57,7 +57,7 @@ To deploy it on the individual target account:
 
 
 ## Service: CloudTrail
-1. ### Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
+### 1. Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
 
 - **Rule Definition**
   - CloudTrail should have Log File Validation Enabled
@@ -81,9 +81,9 @@ To deploy it on the individual target account:
 
 
 
-#
-# Service: EC2
-1. ## Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22
+
+## Service: EC2
+### 2. Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 22
 
 - **Rule Definition**
   - SecurityGroup should not have InboundRules with [ IPRanges with [ IP eq 0.0.0.0/0 ] and ( FromPort lte 22 and ToPort gte 22 ) and Protocol in ("-1", "tcp") ]
@@ -107,7 +107,7 @@ To deploy it on the individual target account:
   - ssm:StartAutomationExecution
   - iam:PassRole
 
-1. ## Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389
+### 3. Communications and control network protection: Ensure no security groups allow ingress from 0.0.0.0/0 to port 3389
 
 - **Rule Definition**
   - SecurityGroup should not have InboundRules with [ IPRanges with [ IP eq 0.0.0.0/0 ] and ( FromPort lte 3389 and ToPort gte 3389 ) and Protocol in ("-1", "udp", "tcp") ]
@@ -132,7 +132,7 @@ To deploy it on the individual target account:
   - ec2:RevokeSecurityGroupEgress
   - ssm:StartAutomationExecution
 
-1. ## Baseline network operations and data flows: Ensure VPC flow logging is enabled in all VPCs
+### 4. Baseline network operations and data flows: Ensure VPC flow logging is enabled in all VPCs
 
 - **Rule Definition**
   - VPC should have atleast one FlowLogs with [ id ]
@@ -152,7 +152,7 @@ To deploy it on the individual target account:
   - ec2:DescribeFlowLogs
   - iam:PassRole
 
-1. ## Communications and control network protection: Ensure no rule exists which allows all ingress traffic in default Network ACL
+### 5. Communications and control network protection: Ensure no rule exists which allows all ingress traffic in default Network ACL
 
 - **Rule Definition**
   - NetworkACL should not have IsDefault eq true and Rules with [ RuleAction eq "allow" and Protocol eq "-1" and Egress eq False and CidrBlock eq 0.0.0.0/0 ]
@@ -171,7 +171,7 @@ To deploy it on the individual target account:
   - ec2:DeleteNetworkAclEntry
 
 ##
-1. ## Communications and control network protection: Ensure no rule exists which allows all ingress traffic in Network ACL which is associated with a subnet
+### 6. Communications and control network protection: Ensure no rule exists which allows all ingress traffic in Network ACL which is associated with a subnet
 
 - **Rule Definition**
   - NetworkACL should not have IsDefault eq true and Rules with [ RuleAction eq "allow" and Protocol eq "-1" and Egress eq False and CidrBlock eq 0.0.0.0/0 ]
@@ -189,22 +189,8 @@ To deploy it on the individual target account:
   - ec2:DescribeNetworkAcls
   - ec2:DeleteNetworkAclEntry
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Service: IAM
-1. ## Remote access: Ensure access keys are rotated every 90 days or less.
+## Service: IAM
+### 7. Remote access: Ensure access keys are rotated every 90 days or less.
 
 - **Rule Definition**
   - IAMUser should not have  AccessKey with [ Active and LastRotatedTime isEarlierThan ( -90 , "days" ) ]
@@ -222,8 +208,8 @@ To deploy it on the individual target account:
   - iam:ListAccessKeys
 #
 #
-# Service: RDS
-1. ## Access permissions and authorizations: Ensure RDS Instances do not have Publicly Accessible Snapshots
+## Service: RDS
+### 8. Access permissions and authorizations: Ensure RDS Instances do not have Publicly Accessible Snapshots
 
 - **Rule Definition**
   - Ensure that** Relational Database Service (RDS) database instances should not have publicly accessible snapshots (i.e. shared with all AWS accounts and users).
@@ -242,8 +228,8 @@ To deploy it on the individual target account:
   - rds:ModifyDBSnapshotAttribute
   - rds:DescribeDBSnapshotAttributes
   - rds:DescribeDBInstance
-# Service: Redshift
-1. ## Access permissions and authorizations: Ensure Redshift Clusters are not Publicly accessible
+## Service: Redshift
+### 9. Access permissions and authorizations: Ensure Redshift Clusters are not Publicly accessible
 
 - **Rule Definition**
   - Amazon Redshift Clusters should not be publicly accessible.
@@ -263,8 +249,8 @@ To deploy it on the individual target account:
   - redshift:ModifyCluster
   - ssm:StartAutomationExecution
   - ssm:GetAutomationExecution
-# Service: S3
-1. ## Ensure S3 Bucket is not publicly accessible.
+## Service: S3
+### 10. Ensure S3 Bucket is not publicly accessible.
 
 - **Rule Definition**
   - S3Bucket should not have Access eq "Public"
