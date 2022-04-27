@@ -1,4 +1,4 @@
-CSPM-AWS-AutoRemediation – CSPM security violation findings Auto-Remediation framework for AWS
+# CSPM-AWS-AutoRemediation – CSPM security violation findings Auto-Remediation framework for AWS
 
 The solution is auto-remediation framework for the security standards violation findings discovered by Netskope Cloud Security Posture Management (CSPM).
 
@@ -15,7 +15,7 @@ To remediate security violations findings across all your organization’s accou
 As a pre-requisite, you need to enable AWS Systems Manager (AWS SSM) on all your accounts and AWS regions. AWS SSM Automation used to remediate violations for such compliance rules as rule 4.1 of the CIS AWS Foundations standard “Ensure no security groups allow ingress from 0.0.0.0/0 to port 22“.
 
 
-Deployment steps.
+# Deployment steps.
 1.  Deploy the AWS-autoremediation CloudFormation stack on the delegate security management account. 
 
     a.  Clone this repository to your machine. 
@@ -52,12 +52,12 @@ To deploy it on the individual target account:
     f.  Optionally, enter the Tags for your CloudFormation stack and click Next.
     g.  Acknowledge creating IAM resources and click Create stack.
     
-    Supported AWS Auto-remediation Rules
+#  Supported AWS Auto-remediation Rules
 
 
 
-# Service: CloudTrail
-1. ## Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
+## Service: CloudTrail
+1. ### Secure audit trails so they cannot be altered: CloudTrail Log Files Lack Integrity Validation
 
 - **Rule Definition**
   - CloudTrail should have Log File Validation Enabled
