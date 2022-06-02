@@ -228,7 +228,7 @@ Resources:
         Role: !GetAtt GetNetskopeCSPMResultsLFRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'GetNetskopeSecurityPostureAssesmentLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "GetNetskopeSecurityPostureAssesmentLambda", 'GetNetskopeSecurityPostureAssesmentLambda.zip']]
         Environment:
           Variables:
             tenant_fqdn: !Ref NetskopeTenantFQDN
@@ -249,7 +249,7 @@ Resources:
         - python3.8
       Content:
         S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-        S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'NetskopeSecurityPostureAssessmentLambdaLayer.zip']]
+        S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "NetskopeSecurityPostureAssessmentLambdaLayer", 'NetskopeSecurityPostureAssessmentLambdaLayer.zip']]
       Description: "Lambda Layer for NetskopeCSPM's Lambda function"
       LayerName: "NetskopeCSPMLambdaLayer"
 
@@ -384,7 +384,7 @@ Resources:
         Role: !GetAtt CIS12029VPCFlowLogsLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-2-9-EnableVPCFlowLogsLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "VPCFlowLogsRemediationLambda", 'CIS-1-2-0-2-9-EnableVPCFlowLogsLambda.zip']]
         Environment:
           Variables:
             AWS_PARTITION: aws
@@ -631,7 +631,7 @@ Resources:
         Role: !GetAtt CIS12041SecurityGroupsLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-4-1-SecurityGroupsLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "SecurityGroupRemediationLambda", 'CIS-1-2-0-4-1-SecurityGroupsLambda.zip']]
         Environment:
           Variables:
             AWS_PARTITION: aws
@@ -740,7 +740,7 @@ Resources:
         Role: !GetAtt BPR38RDSSnapshotsPublicLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-3-8-PublicRDSSnapshotRemediationLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "RDSSnapshotsPublicRemediationLambda",  'BPR-3-8-PublicRDSSnapshotRemediationLambda.zip']]
         Layers:
           - !Ref NetskopeCSPMLambdaLayer
         Environment:
@@ -851,7 +851,7 @@ Resources:
         Role: !GetAtt BPR19RedShiftClusterPublicLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-1-9-PublicRedShiftClusterRemediationLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "RedShiftClusterAccessibilityRemediationLambda", 'BPR-1-9-PublicRedShiftClusterRemediationLambda.zip']]
         Layers:
           - !Ref NetskopeCSPMLambdaLayer
         Environment:
@@ -962,7 +962,7 @@ Resources:
         Role: !GetAtt CIS12022CloudTrailLogFileValidationLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'CIS-1-2-0-2-2-CloudTrailLogFileRemediationLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "CloudTrailLogFileRemediationLambda", 'CIS-1-2-0-2-2-CloudTrailLogFileRemediationLambda.zip']]
         Layers:
           - !Ref NetskopeCSPMLambdaLayer
         Environment:
@@ -1100,7 +1100,7 @@ Resources:
         Role: !GetAtt BPR06NACLLambdaRole.Arn
         Code:
           S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], 'BPR-0-6-NACLRemediationLambda.zip']]
+          S3Key: !Join ['/', [!FindInMap ["SourceCode", "General", "S3Prefix"], "DefaultNetworkACLRemediationLambda", 'BPR-0-6-NACLRemediationLambda.zip']]
         Layers:
           - !Ref NetskopeCSPMLambdaLayer
         Environment:
@@ -1210,7 +1210,7 @@ Resources:
       Role: !GetAtt BPR100S3BucketPublicAccessLambdaRole.Arn
       Code:
         S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], 'BPR-1-0-0-S3BucketPublicAccessRemediationLambda.zip' ] ]
+        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], "S3BucketPublicAccessRemediationLambda", 'BPR-1-0-0-S3BucketPublicAccessRemediationLambda.zip' ] ]
       Layers:
         - !Ref NetskopeCSPMLambdaLayer
       Environment:
@@ -1320,7 +1320,7 @@ Resources:
       Role: !GetAtt CIS12014AccessKeyRotationLambdaRole.Arn
       Code:
         S3Bucket: !Join ['-', [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref 'AWS::Region']]
-        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], 'CIS-1-2-0-1-4-AccessKeyRotationRemediationLambda.zip' ] ]
+        S3Key: !Join [ '/', [ !FindInMap [ "SourceCode", "General", "S3Prefix" ], "AccessKeyRotationRemediationLambda", 'CIS-1-2-0-1-4-AccessKeyRotationRemediationLambda.zip' ] ]
       Layers:
         - !Ref NetskopeCSPMLambdaLayer
       Environment:
