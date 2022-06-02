@@ -5,7 +5,7 @@ The solution is auto-remediation framework for the security standards violation 
 Netskope CSPM continuously assess public cloud deployments to mitigate risk, detect threats, scan and protect sensitive data and monitor for regulatory compliance. Netskope simplifies the discovery of security misconfigurations across your clouds. Netskope Auto-Remediation framework for AWS enables you to automatically mitigate the risk associated with these misconfigurations in your AWS cloud environment. 
 
 Netskope CSPM security assessment results for such security benchmark standards as NIST, CIS, PCI DSS, as well as for your custom rules are available via the View Security Assessment Violations Netskope API. 
-Netskope auto-Remediation solution for AWS deploys the set of AWS Lambada functions that query the above Netskope API on the scheduled intervals and mitigate supported violations automatically. 
+Netskope auto-Remediation solution for AWS deploys the set of AWS Lambda functions that query the above Netskope API on the scheduled intervals and mitigate supported violations automatically. 
 You can deploy the framework as is or customize it to mitigate other security violations and to meet your specific organization’s security requirements. 
 
 ![](.//media/AWS-autoremediation.png)
