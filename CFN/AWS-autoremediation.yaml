@@ -555,7 +555,7 @@ Resources:
                     NotificationConfiguration={}
                 )
                 print("Delete request completed....")
-      Runtime: python3.6
+      Runtime: python3.8
       Environment:
         Variables:
           CIS12029VPCFlowLogs: !Ref CIS12029VPCFlowLogs
